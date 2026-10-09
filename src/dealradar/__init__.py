@@ -1,2 +1,2 @@
 """Real Deal Radar: independent, evidence-backed price comparisons."""
-__version__ = "0.4.1"
+__version__ = "0.4.2"
