@@ -1,0 +1,10 @@
+services:
+  radar:
+    build: .
+    restart: unless-stopped
+    user: "${RADAR_UID:-1000}:${RADAR_GID:-1000}"
+    volumes:
+      - ./:/work
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
