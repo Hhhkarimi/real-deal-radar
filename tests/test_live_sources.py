@@ -145,3 +145,20 @@ class LiveSources(unittest.TestCase):
         c=dataclasses.replace(dk_card(product(),NOW),brand_name='هیسکا')
         with self.assertRaises(ValueError):
             equivalent_quote(c,merchant(mpn='HR-530'),'https://shop.example/p','merchant:shop.example',NOW)
+
+    def test_optional_installments_and_duplicate_shop_preserve_cash_comparison(self):
+        import pathlib,tempfile
+        from dealradar.market import collect_market
+        from dealradar.core import evaluate
+        c=dk_card(product(),NOW)
+        search={'results':[{'random_key':'abc','name1':c.title,'name2':''}]}
+        rows=[{'availability':True,'shop_name':name,'shop_id':sid,'page_url':'https://api.torob.com/v4/product-page/redirect/?shop='+name,
+               'price':1500000+i,'installment':{'providers':[{'name':'TorobPay'}]}}
+              for i,(name,sid) in enumerate([('one',1),('one',1),('two',2)])]
+        detail={'name1':c.title,'price':1500000,'products_info':{'result':rows}}
+        with tempfile.TemporaryDirectory() as directory,patch('dealradar.market.fetch',side_effect=[json.dumps(search),json.dumps(detail)]),patch('dealradar.market.shop_page',side_effect=[(merchant(),'https://one.example/p'),(merchant(),'https://two.example/p')]) as page,patch('dealradar.market.time.sleep'):
+            config={'_base':pathlib.Path(directory),'min_advertised_discount':20,'min_market_sellers':2,'min_saving_percent':15,'max_evidence_age_hours':6,'torob':{'max_candidates':1,'search_results':1,'shops_per_product':2}}
+            quotes,errors=collect_market([c],config,NOW)
+            self.assertEqual(len(quotes),2)
+            self.assertEqual(page.call_count,2)
+            self.assertEqual(evaluate(c,quotes,config,NOW)['status'],'verified')
