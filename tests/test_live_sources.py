@@ -137,3 +137,11 @@ class LiveSources(unittest.TestCase):
         self.assertEqual(q.warranty_key,c.warranty_key)
         with self.assertRaises(ValueError):
             equivalent_quote(c,merchant(additionalProperty=[])+'<footer>گارانتی 18 ماهه تست</footer>','https://shop.example/p','merchant:shop.example',NOW)
+
+    def test_model_suffix_and_conflicting_identifier_rejected(self):
+        c=dataclasses.replace(dk_card(product(),NOW),brand_name='ریولینک',title='هدفون ریولینک مدل RV-25 ANC')
+        with self.assertRaises(ValueError):
+            equivalent_quote(c,merchant(name='هدفون ریولینک RV25 L',brand={'name':'ریولینک'}),'https://shop.example/p','merchant:shop.example',NOW)
+        c=dataclasses.replace(dk_card(product(),NOW),brand_name='هیسکا')
+        with self.assertRaises(ValueError):
+            equivalent_quote(c,merchant(mpn='HR-530'),'https://shop.example/p','merchant:shop.example',NOW)
