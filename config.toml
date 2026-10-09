@@ -11,12 +11,12 @@ database = "data/history.sqlite3"
 
 [digikala]
 enabled = true
-pages = 3
+pages = 6
 request_delay_seconds = 3
 
 [torob]
 enabled = true
-max_candidates = 20
+max_candidates = 40
 search_results = 2
 shops_per_product = 4
 request_delay_seconds = 1
