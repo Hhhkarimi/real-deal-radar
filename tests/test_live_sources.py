@@ -30,6 +30,35 @@ def merchant(**overrides):
 
 
 class LiveSources(unittest.TestCase):
+    def test_rate_limit_or_refusal_stops_discovery_without_retry_storm(self):
+        import pathlib
+        import tempfile
+        from dealradar.market import collect_market
+        c = dk_card(product(), NOW)
+        for status in [403, 429, 490]:
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as directory, patch('dealradar.market.fetch', side_effect=RuntimeError(f'HTTP {status} from api.torob.com')) as request, patch('dealradar.market.time.sleep'):
+                config = {'_base':pathlib.Path(directory), 'min_advertised_discount':20, 'torob':{'max_candidates':2}}
+                quotes, errors = collect_market([c, dataclasses.replace(c, product_key='dkp:456')], config, NOW)
+                self.assertEqual(quotes, [])
+                self.assertEqual(len(errors), 1)
+                self.assertEqual(request.call_count, 1)
+                self.assertEqual(config['_market_coverage']['provider_status'], 'unavailable')
+                self.assertEqual(config['_market_coverage']['failure_counts'], {f'discovery_http_{status}':1})
+
+    def test_equivalent_color_and_warranty_prose_preserve_guarantor_and_duration(self):
+        c = dk_card(product(), NOW)
+        html = merchant(color='white', additionalProperty=[{'name':'گارانتی', 'value':'تست ۱۸ ماه گارانتی'}])
+        q = equivalent_quote(c, html, 'https://shop.example/p', 'merchant:shop.example', NOW)
+        self.assertEqual(q.warranty_key, c.warranty_key)
+        for warranty in ['گارانتی 12 ماهه تست', 'گارانتی 18 ماهه شرکت دیگر', '']:
+            with self.subTest(warranty=warranty), self.assertRaises(ValueError):
+                equivalent_quote(c, merchant(additionalProperty=[{'name':'گارانتی', 'value':warranty}]), 'https://shop.example/p', 'merchant:shop.example', NOW)
+
+    def test_unrelated_invalid_jsonld_does_not_hide_valid_offer(self):
+        html = '<script type="application/ld+json">{broken}</script>' + merchant()
+        q = equivalent_quote(dk_card(product(), NOW), html, 'https://shop.example/p', 'merchant:shop.example', NOW)
+        self.assertEqual(q.price_toman, 1500000)
+
     def test_standard_cookie_redirect(self):
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
