@@ -1,0 +1,62 @@
+name: Telegram channel report
+
+on:
+  schedule:
+    # UTC: 00:17, 06:17, 12:17, 18:17 (Tehran: 03:47, 09:47, 15:47, 21:47)
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview only; do not publish to Telegram'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: telegram-channel-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      MARKET_FEED_URL: ${{ secrets.MARKET_FEED_URL }}
+      CANDIDATE_FEED_URL: ${{ secrets.CANDIDATE_FEED_URL }}
+      RADAR_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+      DEALRADAR_SCHEDULE_MODE: slots
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Restore price and posting history
+        uses: actions/cache/restore@v4
+        with:
+          path: data/history.sqlite3
+          key: channel-history-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            channel-history-v1-
+      - name: Install package
+        run: pip install .
+      - name: Collect, verify and publish one digest
+        run: python scripts/actions_run.py
+      - name: Save history even after a source or delivery failure
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/history.sqlite3
+          key: channel-history-v1-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Keep the report for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: channel-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/
+          retention-days: 7
+          if-no-files-found: warn
