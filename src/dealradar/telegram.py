@@ -1,4 +1,4 @@
-"""One text digest plus product photo albums per reporting invocation."""
+"""A short summary followed by individual captioned product photos."""
 import datetime as dt
 import hashlib
 import html
@@ -88,8 +88,6 @@ def photo_groups(report):
     entries = [(r, True) for r in report['deals']] + [(r, False) for r in report.get('advertised_offers', [])]
     for index, (row, verified) in enumerate(entries, 1):
         c = row['candidate']
-        if not c.get('image_url'):
-            continue
         e = lambda value: html.escape(str(value), quote=True)
         title = c['title'][:240] + ('…' if len(c['title']) > 240 else '')
         caption = f'{index}. <a href="{e(safe_url(c["url"]))}">{e(title)}</a>\n💰 {fa_money(c["price_toman"])} تومان'
@@ -101,7 +99,7 @@ def photo_groups(report):
                 caption += '؛ بدون هزینهٔ ارسال'
         else:
             caption += '\n⚠️ کمترین قیمت بازار تأیید نشده است.'
-        photos.append(dict(type='photo', media=safe_url(c['image_url']), caption=caption, parse_mode='HTML'))
+        photos.append(dict(type='photo', media=safe_url(c['image_url']) if c.get('image_url') else None, caption=caption, parse_mode='HTML'))
     return [photos[i:i+10] for i in range(0, len(photos), 10)]
 
 
@@ -109,24 +107,24 @@ def publish_photos(report, token, channel, settings, *, opener, sleep):
     if not settings.get('photos_enabled', True):
         report['telegram_photos'] = dict(status='disabled', sent=0)
         return
-    groups = photo_groups(report)
+    groups = [[photo] for group in photo_groups(report) for photo in group]
     planned = sum(map(len, groups))
     count = len(report['deals']) + len(report.get('advertised_offers', []))
     delivery = dict(status='sent' if planned else 'no_images', planned=planned, sent=0,
-                    missing_images=count-planned, failed_groups=0)
+                    missing_images=sum(not g[0]['media'] for g in groups), failed_groups=0, photos_sent=0)
     report['telegram_photos'] = delivery
     for group_index, group in enumerate(groups):
-        # Telegram albums require 2..10 items; a final singleton uses sendPhoto.
-        method = 'sendMediaGroup' if len(group) > 1 else 'sendPhoto'
+        # One self-contained message per product, never an album.
+        method = 'sendPhoto' if group[0]['media'] else 'sendMessage'
         body = dict(chat_id=channel, disable_notification=True)
-        if len(group) > 1:
-            body['media'] = group
-        else:
-            p = group[0]
+        p = group[0]
+        if p['media']:
             body.update(photo=p['media'], caption=p['caption'], parse_mode='HTML')
+        else:
+            body.update(text=p['caption'], parse_mode='HTML', link_preview_options={'is_disabled': True})
         confirmed = False
         rejected = False
-        sleep(1)
+        sleep(3.1)
         for attempt in range(3):
             try:
                 req = urllib.request.Request(f'https://api.telegram.org/bot{token}/{method}',
@@ -155,15 +153,34 @@ def publish_photos(report, token, channel, settings, *, opener, sleep):
                 break
         if confirmed:
             delivery['sent'] += len(group)
-        elif rejected and len(group) > 1:
-            # Telegram explicitly rejected the entire album, so no photo was
-            # delivered. Isolate an inaccessible URL without losing good photos.
-            groups[group_index+1:group_index+1] = [[photo] for photo in group]
+            delivery['photos_sent'] += bool(p['media'])
+        elif rejected and p['media']:
+            # A rejected image does not remove the product's caption/link.
+            groups[group_index+1:group_index+1] = [[dict(p, media=None)]]
+            delivery['missing_images'] += 1
         else:
             delivery['failed_groups'] += 1
     if delivery['failed_groups'] or delivery['missing_images']:
         delivery['status'] = 'partial'
     print('Telegram photos: ' + json.dumps(delivery))
+
+
+def summary(report, config):
+    now = dt.datetime.fromisoformat(report['generated_at']).astimezone(ZoneInfo(config.get('timezone', 'Asia/Tehran')))
+    verified = len(report['deals'])
+    advertised = len(report.get('advertised_offers', []))
+    text = f'🔎 <b>گزارش تخفیف‌های دیجی‌کالا</b>\n🕒 {now:%Y-%m-%d %H:%M}\nبررسی هر {report["interval_hours"]} ساعت · {report["candidate_count"]} کالای بررسی‌شده\n'
+    text += f'📦 {verified + advertised} کالا · ✅ {verified} دارای شواهد بازار · ⚠️ {advertised} تخفیف اعلامی\n'
+    if verified + advertised:
+        text += '\nمشخصات و لینک خرید هر کالا در پیام تصویری جداگانهٔ بعدی می‌آید.\n'
+    else:
+        text += '\nکالای واجد شرایط پیدا نشد.\n'
+    text += '\n⚠️ برای تخفیف‌های اعلامی، کمترین قیمت بازار تأیید نشده است. قیمت سبد، موجودی و گارانتی را پیش از خرید بررسی کنید.'
+    if report.get('errors'):
+        text += '\nدریافت بعضی منابع ناموفق بود؛ پوشش بازار کامل نیست.'
+    if report.get('demo'):
+        text += '\nدادهٔ ساختگی؛ پیشنهاد خرید نیست.'
+    return text
 
 
 def publish(report, history, config, *, opener=urllib.request.urlopen, sleep=time.sleep):
@@ -202,7 +219,7 @@ def publish(report, history, config, *, opener=urllib.request.urlopen, sleep=tim
         status("skipped", "interval_not_elapsed")
         print("Telegram delivery: skipped; the posting interval has not elapsed")
         return []
-    payload = json.dumps({"chat_id": channel, "text": digest(report, config), "parse_mode": "HTML",
+    payload = json.dumps({"chat_id": channel, "text": summary(report, config) if settings.get("photos_enabled", True) else digest(report, config), "parse_mode": "HTML",
                           "link_preview_options": {"is_disabled": True}}).encode()
     for attempt in range(3):
         try:
