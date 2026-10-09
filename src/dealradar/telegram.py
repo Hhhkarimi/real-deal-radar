@@ -59,7 +59,10 @@ def digest(report, config):
         if report.get("errors") and not report["candidate_count"]:
             heading += "\n⚠️ دریافت داده ناموفق بود؛ امکان ارزیابی پیشنهادها وجود نداشت.\n"
         else:
-            heading += "\nدر این نوبت پیشنهاد دارای شواهد کافی و صرفه‌جویی مطلوب پیدا نشد.\n"
+            if report.get("market_coverage") and not report["market_coverage"].get("matched_direct_quotes"):
+                heading += "\nبرای تأیید قیمتِ زیر بازار، شواهد همسان کافی از فروشگاه‌ها دریافت نشد.\n"
+            else:
+                heading += "\nدر این نوبت پیشنهاد دارای شواهد کافی و صرفه‌جویی مطلوب پیدا نشد.\n"
     omitted = len(report["deals"]) - len(blocks)
     note = f"\n{omitted} پیشنهاد دیگر در گزارش کامل.\n" if omitted else ""
     return heading + "".join(blocks) + note + footer
