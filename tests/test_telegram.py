@@ -8,7 +8,7 @@ import urllib.error
 from unittest.mock import patch
 
 from dealradar.core import History
-from dealradar.telegram import digest, visible_length, publish, photo_groups
+from dealradar.telegram import digest, visible_length, publish, photo_groups, summary
 
 
 def report(count=2):
@@ -21,12 +21,14 @@ def report(count=2):
                 deals=deals, errors=[], demo=False)
 
 
-C = dict(interval_hours=6, timezone='Asia/Tehran', telegram=dict(enabled=True))
+C = dict(interval_hours=6, timezone='Asia/Tehran', telegram=dict(enabled=True, photos_enabled=False))
+P = dict(C, interval_hours=12, telegram=dict(enabled=True, photos_enabled=True))
 
 
 class TelegramTests(unittest.TestCase):
-    def test_twenty_photos_send_two_albums_with_product_captions(self):
+    def test_twenty_products_send_summary_then_individual_captioned_photos(self):
         row = report(0)
+        row['interval_hours'] = 12
         row['advertised_offers'] = [dict(candidate=dict(title='هدفون <جدید>', url=f'https://shop.example/p/{i}', image_url=f'https://images.example/{i}.jpg', price_toman=700000, discount_percent=40)) for i in range(20)]
         groups = photo_groups(row)
         self.assertEqual(list(map(len, groups)), [10, 10])
@@ -41,12 +43,16 @@ class TelegramTests(unittest.TestCase):
             return io.BytesIO(json.dumps(dict(ok=True, result=result)).encode())
         with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'TELEGRAM_BOT_TOKEN':'secret','TELEGRAM_CHAT_ID':'@channel'}):
             history = History(pathlib.Path(directory)/'h.sqlite')
-            self.assertEqual(publish(row, history, C, opener=opener, sleep=lambda _:None), [])
-            self.assertEqual(len(calls), 3)
-            self.assertTrue(calls[1][0].endswith('/sendMediaGroup'))
+            self.assertEqual(publish(row, history, P, opener=opener, sleep=lambda _:None), [])
+            self.assertEqual(len(calls), 21)
+            self.assertIn('بررسی هر 12 ساعت', calls[0][1]['text'])
+            self.assertTrue(all(url.endswith('/sendPhoto') for url, _ in calls[1:]))
+            self.assertNotIn('https://shop.example/p/0', calls[0][1]['text'])
+            self.assertIn('https://shop.example/p/0', calls[1][1]['caption'])
+            self.assertTrue(calls[1][0].endswith('/sendPhoto'))
             self.assertEqual(row['telegram_photos']['sent'], 20)
-            self.assertEqual(publish(row, history, C, opener=opener, sleep=lambda _:None), [])
-            self.assertEqual(len(calls), 3)
+            self.assertEqual(publish(row, history, P, opener=opener, sleep=lambda _:None), [])
+            self.assertEqual(len(calls), 21)
             history.close()
 
     def test_single_photo_timeout_keeps_text_delivery_and_does_not_retry(self):
@@ -60,14 +66,14 @@ class TelegramTests(unittest.TestCase):
             return io.BytesIO(b'{"ok":true,"result":{"message_id":42}}')
         with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'TELEGRAM_BOT_TOKEN':'secret','TELEGRAM_CHAT_ID':'@channel'}):
             history = History(pathlib.Path(directory)/'h.sqlite')
-            self.assertEqual(publish(row, history, C, opener=opener, sleep=lambda _:None), [])
+            self.assertEqual(publish(row, history, P, opener=opener, sleep=lambda _:None), [])
             self.assertEqual(len(calls), 2)
             self.assertEqual(row['telegram_delivery']['status'], 'sent')
             self.assertEqual(row['telegram_photos']['status'], 'partial')
             self.assertNotIn('secret', json.dumps(row['telegram_photos']))
             history.close()
 
-    def test_explicit_album_rejection_isolates_bad_photo(self):
+    def test_rejected_photo_falls_back_to_its_caption(self):
         row = report(2)
         for i, r in enumerate(row['deals']):
             r['candidate']['image_url'] = f'https://images.example/{i}.jpg'
@@ -81,9 +87,11 @@ class TelegramTests(unittest.TestCase):
             return io.BytesIO(b'{"ok":true,"result":{"message_id":42}}')
         with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'TELEGRAM_BOT_TOKEN':'secret','TELEGRAM_CHAT_ID':'@channel'}):
             history = History(pathlib.Path(directory)/'h.sqlite')
-            self.assertEqual(publish(row, history, C, opener=opener, sleep=lambda _:None), [])
+            self.assertEqual(publish(row, history, P, opener=opener, sleep=lambda _:None), [])
             self.assertEqual(len(calls), 4)
-            self.assertEqual(row['telegram_photos']['sent'], 1)
+            self.assertEqual(row['telegram_photos']['sent'], 2)
+            self.assertEqual(row['telegram_photos']['photos_sent'], 1)
+            self.assertIn('text', calls[2])
             self.assertEqual(row['telegram_photos']['status'], 'partial')
             self.assertEqual(row['telegram_delivery']['status'], 'sent')
             history.close()
@@ -119,7 +127,7 @@ class TelegramTests(unittest.TestCase):
             def opener(*args, **kwargs):
                 calls.append(1)
                 return io.BytesIO(b'{"ok":true,"result":{"message_id":42}}')
-            manual = dict(C, telegram=dict(enabled=True, manual_run_id='1-1'))
+            manual = dict(C, telegram=dict(enabled=True, photos_enabled=False, manual_run_id='1-1'))
             row = report()
             self.assertEqual(publish(row, history, manual, opener=opener), [])
             self.assertEqual(row['telegram_delivery']['status'], 'sent')
