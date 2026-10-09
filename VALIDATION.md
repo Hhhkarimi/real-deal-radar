@@ -19,6 +19,6 @@ The archive contains source, documentation, tests, and a labelled fabricated rep
 
 ## 0.4.1 correction
 
-- 38 tests pass, including brand/model matching with different titles, wrong model/brand/edition/pack rejection, scoped WooCommerce attribute tables and footer exclusion.
+- 39 tests pass, including brand/model matching with different titles, wrong model/brand/edition/pack rejection, scoped WooCommerce attribute tables and footer exclusion.
 - Candidate selection distributes market searches across categories and prioritizes concrete model codes. Defaults expand to six Digikala pages and forty market candidates under the existing time budget.
 - Bounded live preview fetched 40 candidates and searched 4; no live deal was verified. Failures included a merchant HTTP 503, unavailable exact market results and incomplete product identity. This does not certify twenty real recommendations.
