@@ -1,0 +1,52 @@
+{
+  "generated_at": "2026-10-09T09:42:29.866876+00:00",
+  "checked": 3,
+  "budget_exhausted": false,
+  "matched_direct_quotes": 0,
+  "provider": "torob_and_direct_merchants",
+  "eligible": 13,
+  "records": [
+    {
+      "product_key": "dkp:20641515",
+      "title": "جوراب ساق بلند مردانه سیرداش طرح ساده مدل 311 بسته 3 عددی",
+      "matches": [
+        {
+          "title": "جوراب ساق بلند مردانه سیرداش طرح ساده مدل 311 بسته 3 عددی",
+          "url": "https://torob.com/p/dbafcbe2-2b70-44a8-a7fa-000707ac4921/",
+          "aggregator_price_toman": 1105000,
+          "verified_sellers": [],
+          "failures": [
+            {
+              "shop": "پرشین لباس",
+              "reason": "size_mismatch_or_missing"
+            }
+          ]
+        }
+      ],
+      "failures": [],
+      "query": "سیرداش 311"
+    },
+    {
+      "product_key": "dkp:22043547",
+      "title": "ساعت هوشمند 47 میلی متری فنیرسی مدل S370i با بند سیلیکونی",
+      "matches": [
+        {
+          "title": "ساعت هوشمند فنیرسی مدل S370i با بند سیلیکونی و GPS سایز ۴۷ میلی‌متر",
+          "url": "https://torob.com/p/7cab51ae-7833-4c2c-9fa2-2216a48ad603/",
+          "aggregator_price_toman": 12020500,
+          "verified_sellers": [],
+          "failures": []
+        }
+      ],
+      "failures": [],
+      "query": "فنیرسی S370i"
+    },
+    {
+      "product_key": "dkp:22235509",
+      "title": "هاب 7 پورت USB-C هیسکا مدل HR-53",
+      "matches": [],
+      "failures": [],
+      "query": "هیسکا HR-53"
+    }
+  ]
+}
