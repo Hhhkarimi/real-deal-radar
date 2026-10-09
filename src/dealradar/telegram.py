@@ -84,10 +84,12 @@ def publish(report, history, config, *, opener=urllib.request.urlopen, sleep=tim
     history.db.execute("CREATE TABLE IF NOT EXISTS channel_posts (key TEXT PRIMARY KEY, sent_at TEXT, message_id INTEGER)")
     history.db.commit()
     if history.db.execute("SELECT 1 FROM channel_posts WHERE key=?", (key,)).fetchone():
+        print("Telegram delivery: skipped; a report was already sent in this interval slot")
         return []
     last = history.db.execute("SELECT MAX(sent_at) FROM channel_posts WHERE key LIKE ?", (channel_key + ":%",)).fetchone()[0]
     slot_mode = os.environ.get("DEALRADAR_SCHEDULE_MODE") == "slots"
     if not slot_mode and last and (now - dt.datetime.fromisoformat(last)).total_seconds() < config["interval_hours"] * 3600:
+        print("Telegram delivery: skipped; the posting interval has not elapsed")
         return []
     payload = json.dumps({"chat_id": channel, "text": digest(report, config), "parse_mode": "HTML",
                           "link_preview_options": {"is_disabled": True}}).encode()
@@ -101,6 +103,7 @@ def publish(report, history, config, *, opener=urllib.request.urlopen, sleep=tim
                 return ["Telegram did not confirm channel delivery; no successful post recorded"]
             history.db.execute("INSERT INTO channel_posts VALUES (?,?,?)", (key, now.isoformat(), answer["result"]["message_id"]))
             history.db.commit()
+            print("Telegram delivery: sent and confirmed")
             return []
         except urllib.error.HTTPError as error:
             # Telegram explicitly rejected a 429 request, so bounded retry is safe.
