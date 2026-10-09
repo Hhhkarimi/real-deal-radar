@@ -112,6 +112,26 @@ def identity(offer: Offer):
     return offer.product_key, offer.variant_key, offer.warranty_key
 
 
+def advertised_shortlist(results, config, now, limit):
+    """Fill the report with actual advertised offers, never market verification."""
+    eligible = []
+    seen = set()
+    for row in results:
+        c = Offer.parse(row["candidate"])
+        if row["status"] == "verified" or c.supermarket or not c.in_stock:
+            continue
+        if not fresh(c, now, config["max_evidence_age_hours"]):
+            continue
+        if c.discount_percent < config["min_advertised_discount"] or c.price_toman <= 0:
+            continue
+        if "candidate_unavailable_or_stale" in row["reasons"] or c.product_key in seen:
+            continue
+        eligible.append(row)
+        seen.add(c.product_key)
+    eligible.sort(key=lambda row: (-row["candidate"]["discount_percent"], row["candidate"]["price_toman"]))
+    return eligible[:max(0, limit)]
+
+
 def evaluate(candidate: Offer, market: list[Offer], config: dict, now: dt.datetime) -> dict:
     result = {"candidate": dataclasses.asdict(candidate), "status": "unverified", "reasons": [], "evidence": []}
     def reject(reason):
