@@ -19,6 +19,13 @@ The archive contains source, documentation, tests, and a labelled fabricated rep
 
 ## 0.4.1 correction
 
-- 39 tests pass, including brand/model matching with different titles, wrong model/brand/edition/pack rejection, scoped WooCommerce attribute tables and footer exclusion.
+- 40 tests pass, including brand/model matching with different titles, wrong model/brand/edition/pack rejection, scoped WooCommerce attribute tables and footer exclusion.
 - Candidate selection distributes market searches across categories and prioritizes concrete model codes. Defaults expand to six Digikala pages and forty market candidates under the existing time budget.
 - Bounded live preview fetched 40 candidates and searched 4; no live deal was verified. Failures included a merchant HTTP 503, unavailable exact market results and incomplete product identity. This does not certify twenty real recommendations.
+
+## 0.4.2 seller-filter fix
+
+- Live Torob response for product 7cab51ae-7833-4c2c-9fa2-2216a48ad603 contained in-stock seller rows with optional installment.providers metadata. The former predicate excluded these sellers incorrectly.
+- Removed the optional-payment exclusion; concrete direct merchant Offer, stock, model, variant and warranty validation remain mandatory.
+- Duplicate shop IDs no longer consume the independent-shop visit allowance.
+- Regression test verifies that two cash offers remain comparable when both shops also offer financing and the first shop appears twice. All 40 tests pass.
