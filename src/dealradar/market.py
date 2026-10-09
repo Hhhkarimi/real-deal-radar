@@ -241,9 +241,18 @@ def collect_market(candidates, config, now):
                 match = dict(title=detail.get("name1"), url="https://torob.com/p/" + key + "/",
                              aggregator_price_toman=detail.get("price"), verified_sellers=[], failures=[])
                 record["matches"].append(match)
-                eligible = [s for s in sellers if s.get("availability") is True and not s.get("is_price_unreliable") and not s.get("installment")]
+                # installment describes optional payment providers, NOT whether
+                # the displayed price is a monthly payment. Cash-price evidence
+                # still comes from the merchant's concrete Product Offer.
+                eligible = [s for s in sellers if s.get("availability") is True and not s.get("is_price_unreliable")]
                 eligible.sort(key=lambda s: s.get("price", float("inf")))
-                for seller in eligible[:shop_limit]:
+                independent = []
+                seen_shops = set()
+                for seller in eligible:
+                    shop = seller.get("shop_id") or seller.get("shop_name") or seller.get("page_url")
+                    if shop not in seen_shops:
+                        independent.append(seller); seen_shops.add(shop)
+                for seller in independent[:shop_limit]:
                     if time.monotonic() >= deadline:
                         break
                     try:
