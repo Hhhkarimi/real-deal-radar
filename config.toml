@@ -1,5 +1,5 @@
 # Fractional hours are supported. The running worker reloads this file.
-interval_hours = 6
+interval_hours = 12
 max_items = 20
 min_saving_percent = 15
 min_advertised_discount = 20
