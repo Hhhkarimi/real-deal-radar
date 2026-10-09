@@ -1,0 +1,578 @@
+{
+  "generated_at": "2026-10-09T09:43:24.289628+00:00",
+  "interval_hours": 6,
+  "max_items": 20,
+  "candidate_count": 20,
+  "demo": false,
+  "deals": [],
+  "audit": [
+    {
+      "candidate": {
+        "product_key": "dkp:20641515",
+        "title": "جوراب ساق بلند مردانه سیرداش طرح ساده مدل 311 بسته 3 عددی",
+        "url": "https://www.digikala.com/product/dkp-20641515/جوراب-ساق-بلند-مردانه-سیرداش-طرح-ساده-مدل-311-بسته-3-عددی",
+        "seller_id": "digikala-seller:300512",
+        "price_toman": 668000,
+        "shipping_toman": null,
+        "variant_key": "color:none|size:103041",
+        "warranty_key": "گارانتی اصالت و سلامت فیزیکی کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "جوراب مردانه",
+        "supermarket": false,
+        "discount_percent": 67,
+        "expires_at": "2026-10-10T20:29:51.866876+00:00",
+        "product_id": 20641515,
+        "color_name": "",
+        "size_name": "فری سایز",
+        "brand_name": "سیرداش"
+      },
+      "status": "unverified",
+      "reasons": [
+        "insufficient_independent_sellers"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 668000
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:22043547",
+        "title": "ساعت هوشمند 47 میلی متری فنیرسی مدل S370i با بند سیلیکونی",
+        "url": "https://www.digikala.com/product/dkp-22043547/ساعت-هوشمند-47-میلی-متری-فنیرسی-مدل-s370i-با-بند-سیلیکونی",
+        "seller_id": "digikala-seller:782294",
+        "price_toman": 7999990,
+        "shipping_toman": null,
+        "variant_key": "color:1|size:none",
+        "warranty_key": "سرویس ویژه دیجی کالا: 7 روز تضمین بازگشت کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "ساعت هوشمند",
+        "supermarket": false,
+        "discount_percent": 45,
+        "expires_at": "2026-10-09T20:29:51.866876+00:00",
+        "product_id": 22043547,
+        "color_name": "مشکی",
+        "size_name": "",
+        "brand_name": "فنیرسی"
+      },
+      "status": "unverified",
+      "reasons": [
+        "insufficient_independent_sellers"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 7999990
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:22235509",
+        "title": "هاب 7 پورت USB-C هیسکا مدل HR-53",
+        "url": "https://www.digikala.com/product/dkp-22235509/هاب-7-پورت-usb-c-هیسکا-مدل-hr-53",
+        "seller_id": "digikala-seller:15606",
+        "price_toman": 4439000,
+        "shipping_toman": null,
+        "variant_key": "color:11|size:none",
+        "warranty_key": "گارانتی 6 ماهه هیسکا سرویس",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "USB هاب",
+        "supermarket": false,
+        "discount_percent": 44,
+        "expires_at": "2026-10-09T20:29:51.866876+00:00",
+        "product_id": 22235509,
+        "color_name": "خاکستری",
+        "size_name": "",
+        "brand_name": "هیسکا"
+      },
+      "status": "unverified",
+      "reasons": [
+        "insufficient_independent_sellers"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 4439000
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:20641509",
+        "title": "جوراب ساق بلند مردانه سیرداش طرح ساده مدل 302 بسته 3 عددی",
+        "url": "https://www.digikala.com/product/dkp-20641509/جوراب-ساق-بلند-مردانه-سیرداش-طرح-ساده-مدل-302-بسته-3-عددی",
+        "seller_id": "digikala-seller:300512",
+        "price_toman": 668000,
+        "shipping_toman": null,
+        "variant_key": "color:none|size:103041",
+        "warranty_key": "گارانتی اصالت و سلامت فیزیکی کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "جوراب مردانه",
+        "supermarket": false,
+        "discount_percent": 67,
+        "expires_at": "2026-10-09T20:29:51.866876+00:00",
+        "product_id": 20641509,
+        "color_name": "",
+        "size_name": "فری سایز",
+        "brand_name": "سیرداش"
+      },
+      "status": "unverified",
+      "reasons": [
+        "insufficient_independent_sellers"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 668000
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:20122323",
+        "title": "جوراب ساق بلند مردانه سیرداش مدل 1022 بسته 6 عددی",
+        "url": "https://www.digikala.com/product/dkp-20122323/جوراب-ساق-بلند-مردانه-سیرداش-مدل-1022-بسته-6-عددی",
+        "seller_id": "digikala-seller:300512",
+        "price_toman": 1148000,
+        "shipping_toman": null,
+        "variant_key": "color:none|size:103041",
+        "warranty_key": "گارانتی اصالت و سلامت فیزیکی کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "جوراب مردانه",
+        "supermarket": false,
+        "discount_percent": 66,
+        "expires_at": "2026-10-09T20:29:51.866876+00:00",
+        "product_id": 20122323,
+        "color_name": "",
+        "size_name": "فری سایز",
+        "brand_name": "سیرداش"
+      },
+      "status": "unverified",
+      "reasons": [
+        "insufficient_independent_sellers"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 1148000
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:21684713",
+        "title": "سشوار حرفه‌ای هیسکا مدل H5264 با توان 2400 وات، موتور AC پرسرعت، تکنولوژی یونیزاسیون، تنظیم دما در سه حالت، تنظیم سرعت دوگانه، قابلیت باد سرد واقعی، سری متمرکز کننده هوا و پد ضدلغزش",
+        "url": "https://www.digikala.com/product/dkp-21684713/سشوار-حرفهای-هیسکا-مدل-h5264-با-توان-2400-وات-موتور-ac-پرسرعت-تکنولوژی-یونیزاسیون-تنظیم-دما-در-سه-حالت-تنظیم-سرعت-دوگانه-قابلیت-باد-سرد-واقعی-سری-متمرکز-کننده-هوا-و-پد-ضدلغزش",
+        "seller_id": "digikala-seller:15606",
+        "price_toman": 9790000,
+        "shipping_toman": null,
+        "variant_key": "color:1|size:none",
+        "warranty_key": "گارانتی 24 ماهه هیسکا سرویس",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "سشوار",
+        "supermarket": true,
+        "discount_percent": 43,
+        "expires_at": "2026-10-09T20:29:51.866876+00:00",
+        "product_id": 21684713,
+        "color_name": "مشکی",
+        "size_name": "",
+        "brand_name": "هیسکا"
+      },
+      "status": "excluded",
+      "reasons": [
+        "supermarket"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 9790000
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:21008805",
+        "title": "سشوار برس‌دار حرفه‌ای هیسکا مدل H5257 با موتور AC، توان 2200 وات، سه حالت دما، دو سرعت، فناوری یون‌ساز، خشک‌کن سریع، همراه با متمرکزکننده باریک و پهن",
+        "url": "https://www.digikala.com/product/dkp-21008805/سشوار-برسدار-حرفهای-هیسکا-مدل-h5257-با-موتور-ac-توان-2200-وات-سه-حالت-دما-دو-سرعت-فناوری-یونساز-خشککن-سریع-همراه-با-متمرکزکننده-باریک-و-پهن",
+        "seller_id": "digikala-seller:15606",
+        "price_toman": 7689000,
+        "shipping_toman": null,
+        "variant_key": "color:50|size:none",
+        "warranty_key": "گارانتی 24 ماهه هیسکا سرویس",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "سشوار",
+        "supermarket": true,
+        "discount_percent": 45,
+        "expires_at": "2026-10-10T20:29:51.866876+00:00",
+        "product_id": 21008805,
+        "color_name": "رز گلد",
+        "size_name": "",
+        "brand_name": "هیسکا"
+      },
+      "status": "excluded",
+      "reasons": [
+        "supermarket"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 7689000
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:22200161",
+        "title": "هدفون بلوتوثی گردنی بی‌سیم هیسکا مدل FX-602، درایور 12 میلی‌متری، کیفیت صدای Stereo HiFi، نویز کنسلینگ میکروفون ENC، شارژدهی تا 60 ساعت، حالت گیمینگ Low Latency، نشانگر LED و مقاومت در برابر رطوبت و عرق",
+        "url": "https://www.digikala.com/product/dkp-22200161/هدفون-بلوتوثی-گردنی-بیسیم-هیسکا-مدل-fx-602-درایور-12-میلیمتری-کیفیت-صدای-stereo-hifi-نویز-کنسلینگ-میکروفون-enc-شارژدهی-تا-60-ساعت-حالت-گیمینگ-low-latency-نشانگر-led-و-مقاومت-در-برابر-رطوبت-و-عرق",
+        "seller_id": "digikala-seller:15606",
+        "price_toman": 4459000,
+        "shipping_toman": null,
+        "variant_key": "color:1|size:none",
+        "warranty_key": "گارانتی 12 ماهه هیسکا سرویس",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "هدفون، هدست و هندزفری",
+        "supermarket": false,
+        "discount_percent": 35,
+        "expires_at": "2026-10-09T20:29:50.866876+00:00",
+        "product_id": 22200161,
+        "color_name": "مشکی",
+        "size_name": "",
+        "brand_name": "هیسکا"
+      },
+      "status": "unverified",
+      "reasons": [
+        "insufficient_independent_sellers"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 4459000
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:5927887",
+        "title": "جوراب ساق کوتاه مردانه پالوته مدل PM-Ring مجموعه 3 عددی",
+        "url": "https://www.digikala.com/product/dkp-5927887/جوراب-ساق-کوتاه-مردانه-پالوته-مدل-pm-ring-مجموعه-3-عددی",
+        "seller_id": "digikala-seller:404414",
+        "price_toman": 424900,
+        "shipping_toman": null,
+        "variant_key": "color:none|size:103041",
+        "warranty_key": "گارانتی اصالت و سلامت فیزیکی کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "جوراب مردانه",
+        "supermarket": false,
+        "discount_percent": 39,
+        "expires_at": "2026-10-09T20:29:50.866876+00:00",
+        "product_id": 5927887,
+        "color_name": "",
+        "size_name": "فری سایز",
+        "brand_name": "پالوته"
+      },
+      "status": "unverified",
+      "reasons": [
+        "insufficient_independent_sellers"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 424900
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:17815414",
+        "title": "چندراهی برق هیسکا مدل CH-5518EU ",
+        "url": "https://www.digikala.com/product/dkp-17815414/چندراهی-برق-هیسکا-مدل-ch-5518uk",
+        "seller_id": "digikala-seller:15606",
+        "price_toman": 4250000,
+        "shipping_toman": null,
+        "variant_key": "color:2|size:none",
+        "warranty_key": "گارانتی 12 ماهه هیسکا سرویس",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "چندراهی برق و محافظ ولتاژ",
+        "supermarket": false,
+        "discount_percent": 57,
+        "expires_at": "2026-10-10T20:29:50.866876+00:00",
+        "product_id": 17815414,
+        "color_name": "سفید",
+        "size_name": "",
+        "brand_name": "هیسکا"
+      },
+      "status": "unverified",
+      "reasons": [
+        "insufficient_independent_sellers"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 4250000
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:13357639",
+        "title": "شورت پادار مردانه اسپست مدل ASP-BOX-3COL مجموعه سه عددی",
+        "url": "https://www.digikala.com/product/dkp-13357639/شورت-پادار-مردانه-اسپست-مدل-asp-box-3col-مجموعه-سه-عددی",
+        "seller_id": "digikala-seller:398323",
+        "price_toman": 1150000,
+        "shipping_toman": null,
+        "variant_key": "color:none|size:32100172",
+        "warranty_key": "گارانتی اصالت و سلامت فیزیکی کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "لباس زیر مردانه",
+        "supermarket": false,
+        "discount_percent": 23,
+        "expires_at": "2026-10-09T20:29:50.866876+00:00",
+        "product_id": 13357639,
+        "color_name": "",
+        "size_name": "چند رنگ - XXL",
+        "brand_name": "اسپست"
+      },
+      "status": "unverified",
+      "reasons": [
+        "insufficient_independent_sellers"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 1150000
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:22236504",
+        "title": "جوراب ساق کوتاه مردانه سیرداش طرح ساده مدل 814 بسته 3 عددی",
+        "url": "https://www.digikala.com/product/dkp-22236504/جوراب-ساق-کوتاه-مردانه-سیرداش-طرح-ساده-مدل-814-بسته-3-عددی",
+        "seller_id": "digikala-seller:300512",
+        "price_toman": 648000,
+        "shipping_toman": null,
+        "variant_key": "color:none|size:103041",
+        "warranty_key": "گارانتی اصالت و سلامت فیزیکی کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "جوراب مردانه",
+        "supermarket": false,
+        "discount_percent": 68,
+        "expires_at": "2026-10-10T20:29:50.866876+00:00",
+        "product_id": 22236504,
+        "color_name": "",
+        "size_name": "فری سایز",
+        "brand_name": "سیرداش"
+      },
+      "status": "unverified",
+      "reasons": [
+        "insufficient_independent_sellers"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 648000
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:22879463",
+        "title": "اسپیکر بلوتوثی قابل حمل مدل Luxe",
+        "url": "https://www.digikala.com/product/dkp-22879463/اسپیکر-بلوتوثی-قابل-حمل-مدل-luxe",
+        "seller_id": "digikala-seller:864657",
+        "price_toman": 1490000,
+        "shipping_toman": null,
+        "variant_key": "color:181|size:none",
+        "warranty_key": "سرویس ویژه دیجی کالا: 7 روز تضمین بازگشت کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "اسپیکر (بلندگو)",
+        "supermarket": false,
+        "discount_percent": 78,
+        "expires_at": "2026-10-09T11:59:50.866876+00:00",
+        "product_id": 22879463,
+        "color_name": "مشکی - طلایی",
+        "size_name": "",
+        "brand_name": "متفرقه"
+      },
+      "status": "unverified",
+      "reasons": [
+        "insufficient_independent_sellers"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": null
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:22878274",
+        "title": "اتو و حالت‌دهنده‌ی حرفه ای مو مدل 1001-358",
+        "url": "https://www.digikala.com/product/dkp-22878274/اتو-و-حالتدهندهی-حرفه-ای-مو-مدل-1001-358",
+        "seller_id": "digikala-seller:864657",
+        "price_toman": 1990000,
+        "shipping_toman": null,
+        "variant_key": "color:8|size:none",
+        "warranty_key": "سرویس ویژه دیجی کالا: 7 روز تضمین بازگشت کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "اتو و حالت دهنده مو",
+        "supermarket": true,
+        "discount_percent": 74,
+        "expires_at": "2026-10-09T11:59:50.866876+00:00",
+        "product_id": 22878274,
+        "color_name": "بنفش",
+        "size_name": "",
+        "brand_name": "متفرقه"
+      },
+      "status": "excluded",
+      "reasons": [
+        "supermarket"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 1990000
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:7455126",
+        "title": "جوراب ساق کوتاه زنانه اسپست مدل برگ تیره ASP-Leaf-Dark بسته 3 عددی",
+        "url": "https://www.digikala.com/product/dkp-7455126/جوراب-ساق-کوتاه-زنانه-اسپست-مدل-برگ-تیره-asp-leaf-dark-بسته-3-عددی",
+        "seller_id": "digikala-seller:398323",
+        "price_toman": 424900,
+        "shipping_toman": null,
+        "variant_key": "color:none|size:16103041",
+        "warranty_key": "گارانتی اصالت و سلامت فیزیکی کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "جوراب و ساق زنانه",
+        "supermarket": false,
+        "discount_percent": 39,
+        "expires_at": "2026-10-09T20:29:50.866876+00:00",
+        "product_id": 7455126,
+        "color_name": "",
+        "size_name": "زرشکی - فری سایز",
+        "brand_name": "اسپست"
+      },
+      "status": "unverified",
+      "reasons": [
+        "insufficient_independent_sellers"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 424900
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:22878178",
+        "title": "برس حرارتی حرفه ای والر مدل 5͏2͏6͏-3O9O",
+        "url": "https://www.digikala.com/product/dkp-22878178/برس-حرارتی-حرفه-ای-والر-مدل-526-3o9o",
+        "seller_id": "digikala-seller:864657",
+        "price_toman": 1490000,
+        "shipping_toman": null,
+        "variant_key": "color:8|size:none",
+        "warranty_key": "سرویس ویژه دیجی کالا: 7 روز تضمین بازگشت کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "اتو و حالت دهنده مو",
+        "supermarket": true,
+        "discount_percent": 78,
+        "expires_at": "2026-10-09T11:59:50.866876+00:00",
+        "product_id": 22878178,
+        "color_name": "بنفش",
+        "size_name": "",
+        "brand_name": "والر"
+      },
+      "status": "excluded",
+      "reasons": [
+        "supermarket"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 1490000
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:22801448",
+        "title": "خرما شکلاتی با مغزی کره فندق ورسادو - 200 گرم",
+        "url": "https://www.digikala.com/product/dkp-22801448/خرما-شکلاتی-با-مغزی-کره-فندق-ورسادو-200-گرم",
+        "seller_id": "digikala-seller:2007872",
+        "price_toman": 613760,
+        "shipping_toman": null,
+        "variant_key": "color:none|size:none",
+        "warranty_key": "گارانتی اصالت و سلامت فیزیکی کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "شکلات",
+        "supermarket": true,
+        "discount_percent": 20,
+        "expires_at": "2026-10-09T20:29:50.866876+00:00",
+        "product_id": 22801448,
+        "color_name": "",
+        "size_name": "",
+        "brand_name": "سان ورسادو"
+      },
+      "status": "excluded",
+      "reasons": [
+        "supermarket"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 613760
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:22800974",
+        "title": "خرما شکلاتی با مغزی کرم کنجد ورسادو - ۳۵۰ گرم",
+        "url": "https://www.digikala.com/product/dkp-22800974/خرما-شکلاتی-با-مغزی-کرم-کنجد-ورسادو-۳۵۰-گرم",
+        "seller_id": "digikala-seller:2007872",
+        "price_toman": 703360,
+        "shipping_toman": null,
+        "variant_key": "color:none|size:none",
+        "warranty_key": "گارانتی اصالت و سلامت فیزیکی کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "شکلات",
+        "supermarket": true,
+        "discount_percent": 20,
+        "expires_at": "2026-10-09T20:29:50.866876+00:00",
+        "product_id": 22800974,
+        "color_name": "",
+        "size_name": "",
+        "brand_name": "سان ورسادو"
+      },
+      "status": "excluded",
+      "reasons": [
+        "supermarket"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 703360
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:22800507",
+        "title": "خرما شکلاتی مغزدار با کرم نارگیل ورسادو - 350 گرم\n",
+        "url": "https://www.digikala.com/product/dkp-22800507/خرما-شکلاتی-مغزدار-با-کرم-نارگیل-ورسادو-350-گرم",
+        "seller_id": "digikala-seller:2007872",
+        "price_toman": 703360,
+        "shipping_toman": null,
+        "variant_key": "color:none|size:none",
+        "warranty_key": "گارانتی اصالت و سلامت فیزیکی کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "شکلات",
+        "supermarket": true,
+        "discount_percent": 20,
+        "expires_at": "2026-10-10T20:29:50.866876+00:00",
+        "product_id": 22800507,
+        "color_name": "",
+        "size_name": "",
+        "brand_name": "سان ورسادو"
+      },
+      "status": "excluded",
+      "reasons": [
+        "supermarket"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 703360
+    },
+    {
+      "candidate": {
+        "product_key": "dkp:14582108",
+        "title": "جوراب مردانه اسپست مدل ASP-VRT مجموعه 3 عددی ",
+        "url": "https://www.digikala.com/product/dkp-14582108/جوراب-ساق-بلند-مردانه-اسپست-مدل-asp-vrt-مجموعه-3-عددی",
+        "seller_id": "digikala-seller:398323",
+        "price_toman": 499900,
+        "shipping_toman": null,
+        "variant_key": "color:none|size:103041",
+        "warranty_key": "گارانتی اصالت و سلامت فیزیکی کالا",
+        "observed_at": "2026-10-09T09:42:29.866876+00:00",
+        "in_stock": true,
+        "category": "جوراب مردانه",
+        "supermarket": false,
+        "discount_percent": 29,
+        "expires_at": "2026-10-09T20:29:50.866876+00:00",
+        "product_id": 14582108,
+        "color_name": "",
+        "size_name": "فری سایز",
+        "brand_name": "اسپست"
+      },
+      "status": "unverified",
+      "reasons": [
+        "insufficient_independent_sellers"
+      ],
+      "evidence": [],
+      "previous_30d_low_toman": 499900
+    }
+  ],
+  "verified_not_shown": 0,
+  "errors": [],
+  "market_coverage": {
+    "checked": 3,
+    "budget_exhausted": false,
+    "matched_direct_quotes": 0,
+    "provider": "torob_and_direct_merchants"
+  }
+}
