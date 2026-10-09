@@ -25,6 +25,27 @@ C = dict(interval_hours=6, timezone='Asia/Tehran', telegram=dict(enabled=True))
 
 
 class TelegramTests(unittest.TestCase):
+    def test_manual_runs_send_without_consuming_scheduled_slot(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'TELEGRAM_BOT_TOKEN':'secret', 'TELEGRAM_CHAT_ID':'@channel', 'DEALRADAR_SCHEDULE_MODE':'slots'}):
+            history = History(pathlib.Path(directory)/'h.sqlite')
+            calls = []
+            def opener(*args, **kwargs):
+                calls.append(1)
+                return io.BytesIO(b'{"ok":true,"result":{"message_id":42}}')
+            manual = dict(C, telegram=dict(enabled=True, manual_run_id='1-1'))
+            row = report()
+            self.assertEqual(publish(row, history, manual, opener=opener), [])
+            self.assertEqual(row['telegram_delivery']['status'], 'sent')
+            self.assertEqual(publish(row, history, manual, opener=opener), [])
+            self.assertEqual(row['telegram_delivery']['reason'], 'manual_run_already_sent')
+            self.assertEqual(publish(row, history, C, opener=opener), [])
+            manual['telegram']['manual_run_id'] = '2-1'
+            self.assertEqual(publish(row, history, manual, opener=opener), [])
+            self.assertEqual(publish(row, history, C, opener=opener), [])
+            self.assertEqual(row['telegram_delivery']['reason'], 'slot_already_sent')
+            self.assertEqual(len(calls), 3)
+            history.close()
+
     def test_twenty_deals_fit_one_post_and_html_is_escaped(self):
         text = digest(report(20), C)
         self.assertLessEqual(visible_length(text), 4096)
