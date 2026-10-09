@@ -8,6 +8,13 @@ spec.loader.exec_module(runner)
 
 
 class ActionsTests(unittest.TestCase):
+    def test_manual_dispatch_has_its_own_delivery_identifier(self):
+        c, dry = runner.configure({}, {'RADAR_DRY_RUN':'false', 'TELEGRAM_BOT_TOKEN':'test', 'TELEGRAM_CHAT_ID':'test', 'DEALRADAR_MANUAL_RUN_ID':'123-2'})
+        self.assertFalse(dry)
+        self.assertEqual(c['telegram']['manual_run_id'], '123-2')
+        c, _ = runner.configure({}, {'RADAR_DRY_RUN':'true'})
+        self.assertNotIn('manual_run_id', c['telegram'])
+
     def test_real_publish_requires_secrets(self):
         with self.assertRaises(ValueError):
             runner.configure({}, {})
