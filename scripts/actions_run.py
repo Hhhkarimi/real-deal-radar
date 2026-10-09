@@ -1,5 +1,8 @@
 """GitHub Actions one-shot runner; never prints secret-valued configuration."""
 import os
+import json
+import re
+from collections import Counter
 from pathlib import Path
 
 from dealradar.cli import run_once
@@ -30,6 +33,13 @@ def main():
         raise SystemExit("Configuration invalid: check repository secrets and HTTPS feed URLs") from None
     row = run_once(config, send=not dry)
     print(f"Generated report: {len(row['deals'])} verified deals; {len(row['errors'])} errors; preview={dry}")
+    print("Market coverage: " + json.dumps(row.get("market_coverage", {}), ensure_ascii=False))
+    source_failures = Counter()
+    for error in row["errors"]:
+        provider = next((p for p in ["Digikala", "Torob", "Telegram"] if error.startswith(p)), "other")
+        status = re.search(r"HTTP (\d{3})", error)
+        source_failures[provider + ("_http_" + status[1] if status else "_failed")] += 1
+    print("Source failure counts: " + json.dumps(dict(source_failures)))
     # Fail visibly on missing data or unconfirmed Telegram delivery. Reports and
     # history are saved by the always() workflow steps regardless of this exit.
     if any(error.startswith("Telegram") for error in row["errors"]):
