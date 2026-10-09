@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+data/
+output/
+.env
+config.local.toml
+live-output/
