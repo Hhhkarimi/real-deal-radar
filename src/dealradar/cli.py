@@ -6,7 +6,7 @@ import signal
 import threading
 import time
 
-from .core import History, UTC, evaluate, identity, load_config
+from .core import History, UTC, evaluate, identity, load_config, advertised_shortlist
 from .report import write_reports
 from .sources import collect, dk_details
 from .telegram import digest, publish
@@ -69,9 +69,11 @@ def run_once(config, *, demo=False, send=True):
             results.append(row)
         verified = sorted((r for r in results if r["status"] == "verified"), key=lambda r: (-r["saving_percent"], -r["saving_toman"]))
         deals = verified[:config["max_items"]]
+        advertised = advertised_shortlist(results, config, dt.datetime.now(UTC), config["max_items"] - len(deals))
         report = dict(generated_at=dt.datetime.now(UTC).isoformat(), interval_hours=config["interval_hours"],
                       max_items=config["max_items"], candidate_count=len(candidates), demo=demo,
                       deals=deals, audit=[r for r in results if r["status"] != "verified"],
+                      advertised_offers=advertised,
                       verified_not_shown=max(0, len(verified) - len(deals)), errors=errors)
         if config.get("_market_coverage"):
             report["market_coverage"] = config["_market_coverage"]
