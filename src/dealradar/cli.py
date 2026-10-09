@@ -77,6 +77,8 @@ def run_once(config, *, demo=False, send=True):
             report["market_coverage"] = config["_market_coverage"]
         if not demo and send:
             report["errors"].extend(publish(report, history, config))
+        else:
+            report["telegram_delivery"] = {"status": "demo" if demo else "preview"}
         write_reports(report, config["_base"] / config.get("output_dir", "output"), config.get("timezone", "Asia/Tehran"))
         destination = config["_base"] / config.get("output_dir", "output")
         post = digest(report, config)
