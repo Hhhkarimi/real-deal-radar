@@ -1,0 +1,19 @@
+interval_hours = 6
+max_items = 20
+min_saving_percent = 15
+min_advertised_discount = 20
+min_market_sellers = 2
+max_evidence_age_hours = 6
+timezone = "Asia/Tehran"
+output_dir = "../demo-output"
+database = "../demo-data/history.sqlite3"
+
+[digikala]
+enabled = false
+
+[feeds]
+candidates = ["candidates.json"]
+market = ["market.json"]
+
+[telegram]
+enabled = false
