@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "real-deal-radar"
+version = "0.4.0"
+description = "Evidence-backed Persian deal reports with user-configurable scheduling"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+readme = "README.md"
+dependencies = []
+
+[project.scripts]
+dealradar = "dealradar.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
