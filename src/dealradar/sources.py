@@ -150,6 +150,18 @@ def dk_card(product, now):
                supermarket=supermarket,
                discount_percent=price.get("discount_percent", 0))
     row.update(color_name=color.get("title", ""), size_name=size.get("title", ""), brand_name=layer.get("brand", ""))
+    main_image = (product.get("images") or {}).get("main") or {}
+    image_urls = main_image.get("url") or []
+    if isinstance(image_urls, str):
+        image_urls = [image_urls]
+    for image_url in image_urls:
+        if not isinstance(image_url, str):
+            continue
+        try:
+            row["image_url"] = safe_url(image_url)
+            break
+        except (ValueError, TypeError):
+            continue
     if price.get("timer", 0) > 0:
         row["expires_at"] = (now + dt.timedelta(seconds=price["timer"])).isoformat()
     return Offer.parse(row)
