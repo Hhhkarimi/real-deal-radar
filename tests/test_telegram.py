@@ -8,7 +8,7 @@ import urllib.error
 from unittest.mock import patch
 
 from dealradar.core import History
-from dealradar.telegram import digest, visible_length, publish
+from dealradar.telegram import digest, visible_length, publish, photo_groups
 
 
 def report(count=2):
@@ -25,6 +25,69 @@ C = dict(interval_hours=6, timezone='Asia/Tehran', telegram=dict(enabled=True))
 
 
 class TelegramTests(unittest.TestCase):
+    def test_twenty_photos_send_two_albums_with_product_captions(self):
+        row = report(0)
+        row['advertised_offers'] = [dict(candidate=dict(title='هدفون <جدید>', url=f'https://shop.example/p/{i}', image_url=f'https://images.example/{i}.jpg', price_toman=700000, discount_percent=40)) for i in range(20)]
+        groups = photo_groups(row)
+        self.assertEqual(list(map(len, groups)), [10, 10])
+        self.assertIn('کمترین قیمت بازار تأیید نشده', groups[0][0]['caption'])
+        self.assertIn('https://shop.example/p/0', groups[0][0]['caption'])
+        self.assertNotIn('<جدید>', groups[0][0]['caption'])
+        self.assertLessEqual(visible_length(groups[0][0]['caption']), 1024)
+        calls = []
+        def opener(req, **kwargs):
+            body = json.loads(req.data); calls.append((req.full_url, body))
+            result = [{'message_id': i+1} for i in range(len(body['media']))] if 'media' in body else {'message_id':42}
+            return io.BytesIO(json.dumps(dict(ok=True, result=result)).encode())
+        with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'TELEGRAM_BOT_TOKEN':'secret','TELEGRAM_CHAT_ID':'@channel'}):
+            history = History(pathlib.Path(directory)/'h.sqlite')
+            self.assertEqual(publish(row, history, C, opener=opener, sleep=lambda _:None), [])
+            self.assertEqual(len(calls), 3)
+            self.assertTrue(calls[1][0].endswith('/sendMediaGroup'))
+            self.assertEqual(row['telegram_photos']['sent'], 20)
+            self.assertEqual(publish(row, history, C, opener=opener, sleep=lambda _:None), [])
+            self.assertEqual(len(calls), 3)
+            history.close()
+
+    def test_single_photo_timeout_keeps_text_delivery_and_does_not_retry(self):
+        row = report(1)
+        row['deals'][0]['candidate']['image_url'] = 'https://images.example/one.jpg'
+        calls = []
+        def opener(req, **kwargs):
+            calls.append(req.full_url)
+            if req.full_url.endswith('/sendPhoto'):
+                raise TimeoutError('secret')
+            return io.BytesIO(b'{"ok":true,"result":{"message_id":42}}')
+        with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'TELEGRAM_BOT_TOKEN':'secret','TELEGRAM_CHAT_ID':'@channel'}):
+            history = History(pathlib.Path(directory)/'h.sqlite')
+            self.assertEqual(publish(row, history, C, opener=opener, sleep=lambda _:None), [])
+            self.assertEqual(len(calls), 2)
+            self.assertEqual(row['telegram_delivery']['status'], 'sent')
+            self.assertEqual(row['telegram_photos']['status'], 'partial')
+            self.assertNotIn('secret', json.dumps(row['telegram_photos']))
+            history.close()
+
+    def test_explicit_album_rejection_isolates_bad_photo(self):
+        row = report(2)
+        for i, r in enumerate(row['deals']):
+            r['candidate']['image_url'] = f'https://images.example/{i}.jpg'
+        calls = []
+        def opener(req, **kwargs):
+            body = json.loads(req.data); calls.append(body)
+            if 'media' in body:
+                raise urllib.error.HTTPError('redacted',400,'bad photo',{},io.BytesIO(b'{}'))
+            if body.get('photo') == 'https://images.example/0.jpg':
+                raise urllib.error.HTTPError('redacted',400,'bad photo',{},io.BytesIO(b'{}'))
+            return io.BytesIO(b'{"ok":true,"result":{"message_id":42}}')
+        with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'TELEGRAM_BOT_TOKEN':'secret','TELEGRAM_CHAT_ID':'@channel'}):
+            history = History(pathlib.Path(directory)/'h.sqlite')
+            self.assertEqual(publish(row, history, C, opener=opener, sleep=lambda _:None), [])
+            self.assertEqual(len(calls), 4)
+            self.assertEqual(row['telegram_photos']['sent'], 1)
+            self.assertEqual(row['telegram_photos']['status'], 'partial')
+            self.assertEqual(row['telegram_delivery']['status'], 'sent')
+            history.close()
+
     def test_twenty_advertised_offers_have_links_prices_and_clear_uncertainty(self):
         row = report(0)
         row['advertised_offers'] = [dict(candidate=dict(title='هدفون <مدل جدید> ' * 20, url=f'https://shop.example/p/{i}', price_toman=700000, discount_percent=40)) for i in range(20)]
