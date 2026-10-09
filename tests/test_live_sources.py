@@ -30,6 +30,13 @@ def merchant(**overrides):
 
 
 class LiveSources(unittest.TestCase):
+    def test_digikala_image_extraction_prefers_main_non_webp_url(self):
+        p = product()
+        p['images'] = {'main':{'url':['http://bad.example/p.jpg','https://images.example/product.jpg'], 'webp_url':['https://images.example/product.webp']}}
+        self.assertEqual(dk_card(p, NOW).image_url, 'https://images.example/product.jpg')
+        del p['images']
+        self.assertIsNone(dk_card(p, NOW).image_url)
+
     def test_rate_limit_or_refusal_stops_discovery_without_retry_storm(self):
         import pathlib
         import tempfile
