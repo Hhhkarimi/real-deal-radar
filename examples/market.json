@@ -1,0 +1,34 @@
+{
+  "offers": [
+    {
+      "product_key": "demo:headphone-1",
+      "title": "هدفون نمونه — دادهٔ ساختگی",
+      "url": "https://merchant0.example/product/demo",
+      "seller_id": "demo:merchant-0",
+      "price_toman": 1000000,
+      "shipping_toman": null,
+      "variant_key": "black",
+      "warranty_key": "18-month-demo",
+      "observed_at": "2026-10-09T08:56:21.907989+00:00",
+      "in_stock": true,
+      "category": "هدفون",
+      "supermarket": false,
+      "discount_percent": 0
+    },
+    {
+      "product_key": "demo:headphone-1",
+      "title": "هدفون نمونه — دادهٔ ساختگی",
+      "url": "https://merchant1.example/product/demo",
+      "seller_id": "demo:merchant-1",
+      "price_toman": 1100000,
+      "shipping_toman": null,
+      "variant_key": "black",
+      "warranty_key": "18-month-demo",
+      "observed_at": "2026-10-09T08:56:21.907989+00:00",
+      "in_stock": true,
+      "category": "هدفون",
+      "supermarket": false,
+      "discount_percent": 0
+    }
+  ]
+}
