@@ -9,7 +9,7 @@ on:
       dry_run:
         description: 'Preview only; do not publish to Telegram'
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: read
@@ -30,6 +30,7 @@ jobs:
       CANDIDATE_FEED_URL: ${{ secrets.CANDIDATE_FEED_URL }}
       RADAR_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
       DEALRADAR_SCHEDULE_MODE: slots
+      DEALRADAR_MANUAL_RUN_ID: ${{ github.event_name == 'workflow_dispatch' && format('{0}-{1}', github.run_id, github.run_attempt) || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
