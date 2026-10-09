@@ -20,6 +20,28 @@ def normalized(value):
     return " ".join(re.findall(r"[^\W_]+", value.casefold()))
 
 
+def color_identity(value):
+    name = normalized(value)
+    aliases = {"black": "مشکی", "سیاه": "مشکی", "white": "سفید",
+               "red": "قرمز", "blue": "آبی", "green": "سبز",
+               "silver": "نقره ای", "نقره‌ای": "نقره ای",
+               "grey": "خاکستری", "gray": "خاکستری", "gold": "طلایی"}
+    return aliases.get(name, name)
+
+
+def warranty_identity(value):
+    text = normalized(value)
+    # Normalize prose, never erase the duration or guarantor's name.
+    text = re.sub(r"(\d+)\s*ماهه?", r"\1 ماه", text)
+    tokens = [t for t in text.split() if t not in {"گارانتی", "ضمانت", "کالا"}]
+    return tuple(sorted(tokens))
+
+
+def failure_code(error, prefix):
+    status = re.search(r"HTTP (\d{3})", str(error))
+    return prefix + "_http_" + status[1] if status else prefix + "_request_failed"
+
+
 def search_query(candidate):
     model = re.search(r"مدل\s+([^\s،,]+)", candidate.title)
     if model and any(c.isdigit() for c in model[1]):
@@ -153,12 +175,12 @@ def equivalent_quote(candidate, html, url, seller_id, now):
     # product's reviews, a search snippet or an unfiltered list of variants.
     color = product.get("color") or attribute("رنگ", "color")
     size = product.get("size") or attribute("سایز", "اندازه", "size")
-    if normalized(color) != normalized(candidate.color_name):
+    if color_identity(color) != color_identity(candidate.color_name):
         raise ValueError("color_mismatch_or_missing")
     if normalized(size) != normalized(candidate.size_name):
         raise ValueError("size_mismatch_or_missing")
     warranty = attribute("گارانتی", "ضمانت", "warranty")
-    if candidate.warranty_key == "نامشخص" or normalized(warranty) != normalized(candidate.warranty_key):
+    if candidate.warranty_key == "نامشخص" or not warranty_identity(warranty) or warranty_identity(warranty) != warranty_identity(candidate.warranty_key):
         raise ValueError("warranty_mismatch_or_missing")
     offers = product.get("offers", [])
     if isinstance(offers, dict):
@@ -193,6 +215,7 @@ def collect_market(candidates, config, now):
     delay = max(1, float(settings.get("request_delay_seconds", 1)))
     deadline = time.monotonic() + min(600, max(30, float(settings.get("max_duration_seconds", 480))))
     audit, quotes, errors = [], [], []
+    provider_status = "available"
     eligible_candidates = [c for c in candidates if not c.supermarket and c.in_stock and
                            c.discount_percent >= config["min_advertised_discount"]]
     ranked = sorted(eligible_candidates, key=lambda c: (not bool(model_code(c.title)), -c.discount_percent, c.product_key))
@@ -215,7 +238,9 @@ def collect_market(candidates, config, now):
         try:
             query, required = search_query(candidate)
             record["query"] = query
-            search = json.loads(fetch("https://api.torob.com/v4/base-product/search/?" + urlencode({"q": query, "page": 0})))
+            # Pace search requests too, including searches with zero matches.
+            time.sleep(delay)
+            search = json.loads(fetch("https://api.torob.com/v4/base-product/search/?" + urlencode({"q": query, "page": 0}), attempts=1))
             seen = set()
             rows = []
             for item in search["results"]:
@@ -236,7 +261,7 @@ def collect_market(candidates, config, now):
                     break
                 time.sleep(delay)
                 key = item["random_key"]
-                detail = json.loads(fetch("https://api.torob.com/v4/base-product/details/?" + urlencode({"prk": key})))
+                detail = json.loads(fetch("https://api.torob.com/v4/base-product/details/?" + urlencode({"prk": key}), attempts=1))
                 sellers = detail.get("products_info", {}).get("result", [])
                 match = dict(title=detail.get("name1"), url="https://torob.com/p/" + key + "/",
                              aggregator_price_toman=detail.get("price"), verified_sellers=[], failures=[])
@@ -271,15 +296,22 @@ def collect_market(candidates, config, now):
                         match["failures"].append(dict(shop=seller.get("shop_name"), reason=str(error)))
         except Exception as error:
             record["failures"].append(str(error))
-            errors.append("Torob discovery failed: " + candidate.product_key + ": " + type(error).__name__)
+            code = failure_code(error, "discovery")
+            errors.append("Torob discovery failed: " + candidate.product_key + ": " + code)
+            if code in {"discovery_http_403", "discovery_http_429", "discovery_http_490"}:
+                # Respect refusal/rate limits. Do not hit dozens of remaining
+                # products after the provider has rejected this run.
+                provider_status = "unavailable"
+                break
     destination = config["_base"] / config.get("output_dir", "output")
     destination.mkdir(parents=True, exist_ok=True)
     summary = dict(checked=len(audit), budget_exhausted=time.monotonic() >= deadline,
-                   matched_direct_quotes=len(quotes), provider="torob_and_direct_merchants")
+                   matched_direct_quotes=len(quotes), provider="torob_and_direct_merchants",
+                   provider_status=provider_status, selected=len(selected))
     failures = Counter()
     for record in audit:
         for reason in record["failures"]:
-            failures["discovery_request_failed"] += 1
+            failures[failure_code(reason, "discovery")] += 1
         if not record["matches"] and not record["failures"]: failures["no_exact_market_result"] += 1
         for match in record["matches"]:
             if not match["verified_sellers"] and not match["failures"]: failures["no_eligible_online_seller"] += 1
