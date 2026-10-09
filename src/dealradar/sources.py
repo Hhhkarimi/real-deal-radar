@@ -74,7 +74,12 @@ class StructuredData(HTMLParser):
     def handle_endtag(self, tag):
         if tag == "script" and self.active:
             self.active = False
-            self.documents.append(json.loads("".join(self.buffer)))
+            try:
+                self.documents.append(json.loads("".join(self.buffer)))
+            except json.JSONDecodeError:
+                # One malformed unrelated schema block must not discard a
+                # separate valid Product/Offer. No price is inferred from it.
+                pass
 
 
 def products(value):
