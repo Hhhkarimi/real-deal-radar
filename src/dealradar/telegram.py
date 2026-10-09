@@ -34,6 +34,8 @@ def digest(report, config):
         footer += "\nهزینهٔ ارسال در مقایسه‌های علامت‌دار (*) محاسبه نشده است."
     if report.get("errors"):
         footer += "\n⚠️ دریافت بعضی منابع ناموفق بود؛ پوشش بازار کامل نیست."
+    if report.get("market_coverage", {}).get("provider_status") == "unavailable":
+        footer += "\n⚠️ منبع قیمت بازار درخواست‌ها را نپذیرفت؛ بررسی بازار این نوبت متوقف شد."
     if report.get("market_coverage", {}).get("budget_exhausted"):
         footer += "\nبررسی بازار به سقف زمان این نوبت رسید."
     report_url = config.get("telegram", {}).get("report_url")
@@ -70,25 +72,38 @@ def digest(report, config):
 
 def publish(report, history, config, *, opener=urllib.request.urlopen, sleep=time.sleep):
     settings = config.get("telegram", {})
+    def status(value, reason=None):
+        report["telegram_delivery"] = {"status": value}
+        if reason:
+            report["telegram_delivery"]["reason"] = reason
     if not settings.get("enabled", False):
+        status("disabled")
         return []
     token = os.environ.get(settings.get("token_env", "TELEGRAM_BOT_TOKEN"))
     channel = os.environ.get(settings.get("chat_id_env", "TELEGRAM_CHAT_ID"))
     if not token or not channel:
+        status("failed", "missing_credentials")
         return ["Telegram channel post not sent: missing environment credentials"]
     now = dt.datetime.fromisoformat(report["generated_at"])
     slot = int(now.timestamp() // (config["interval_hours"] * 3600))
     # The same interval is not posted again after a worker/container restart.
     channel_key = hashlib.sha256(channel.encode()).hexdigest()
     key = f"{channel_key}:{config['interval_hours']}:{slot}"
+    manual_id = settings.get("manual_run_id")
+    if manual_id:
+        # Manual runs do not consume a scheduled slot. The run/attempt key still
+        # prevents re-delivery when the same invocation is resumed.
+        key = f"{channel_key}:manual:{manual_id}"
     history.db.execute("CREATE TABLE IF NOT EXISTS channel_posts (key TEXT PRIMARY KEY, sent_at TEXT, message_id INTEGER)")
     history.db.commit()
     if history.db.execute("SELECT 1 FROM channel_posts WHERE key=?", (key,)).fetchone():
+        status("skipped", "manual_run_already_sent" if manual_id else "slot_already_sent")
         print("Telegram delivery: skipped; a report was already sent in this interval slot")
         return []
-    last = history.db.execute("SELECT MAX(sent_at) FROM channel_posts WHERE key LIKE ?", (channel_key + ":%",)).fetchone()[0]
+    last = history.db.execute("SELECT MAX(sent_at) FROM channel_posts WHERE key LIKE ? AND key NOT LIKE ?", (channel_key + ":%", channel_key + ":manual:%")).fetchone()[0]
     slot_mode = os.environ.get("DEALRADAR_SCHEDULE_MODE") == "slots"
-    if not slot_mode and last and (now - dt.datetime.fromisoformat(last)).total_seconds() < config["interval_hours"] * 3600:
+    if not manual_id and not slot_mode and last and (now - dt.datetime.fromisoformat(last)).total_seconds() < config["interval_hours"] * 3600:
+        status("skipped", "interval_not_elapsed")
         print("Telegram delivery: skipped; the posting interval has not elapsed")
         return []
     payload = json.dumps({"chat_id": channel, "text": digest(report, config), "parse_mode": "HTML",
@@ -100,9 +115,11 @@ def publish(report, history, config, *, opener=urllib.request.urlopen, sleep=tim
             with opener(req, timeout=25) as response:
                 answer = json.load(response)
             if not answer.get("ok") or not answer.get("result", {}).get("message_id"):
+                status("failed", "delivery_unconfirmed")
                 return ["Telegram did not confirm channel delivery; no successful post recorded"]
             history.db.execute("INSERT INTO channel_posts VALUES (?,?,?)", (key, now.isoformat(), answer["result"]["message_id"]))
             history.db.commit()
+            status("sent")
             print("Telegram delivery: sent and confirmed")
             return []
         except urllib.error.HTTPError as error:
@@ -121,4 +138,5 @@ def publish(report, history, config, *, opener=urllib.request.urlopen, sleep=tim
             # A timeout may happen AFTER Telegram accepted a request. Do not
             # retry blindly within this run, and never expose token-bearing URLs.
             break
+    status("failed", "delivery_unconfirmed")
     return ["Telegram channel delivery failed or was not confirmed; check channel permissions and worker logs"]
