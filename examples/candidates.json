@@ -1,0 +1,19 @@
+{
+  "offers": [
+    {
+      "product_key": "demo:headphone-1",
+      "title": "هدفون نمونه — دادهٔ ساختگی",
+      "url": "https://digikala.example/product/demo",
+      "seller_id": "demo:dk",
+      "price_toman": 700000,
+      "shipping_toman": null,
+      "variant_key": "black",
+      "warranty_key": "18-month-demo",
+      "observed_at": "2026-10-09T08:56:21.907989+00:00",
+      "in_stock": true,
+      "category": "هدفون",
+      "supermarket": false,
+      "discount_percent": 50
+    }
+  ]
+}
