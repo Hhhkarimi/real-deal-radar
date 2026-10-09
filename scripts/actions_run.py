@@ -38,6 +38,7 @@ def main():
         raise SystemExit("Configuration invalid: check repository secrets and HTTPS feed URLs") from None
     row = run_once(config, send=not dry)
     print(f"Generated report: {len(row['deals'])} verified deals; {len(row['errors'])} errors; preview={dry}")
+    print(f"Advertised offers without market verification: {len(row.get('advertised_offers', []))}")
     print("Telegram delivery: " + json.dumps(row.get("telegram_delivery", {"status": "preview" if dry else "unknown"})))
     print("Market coverage: " + json.dumps(row.get("market_coverage", {}), ensure_ascii=False))
     source_failures = Counter()
