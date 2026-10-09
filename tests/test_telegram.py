@@ -25,6 +25,30 @@ C = dict(interval_hours=6, timezone='Asia/Tehran', telegram=dict(enabled=True))
 
 
 class TelegramTests(unittest.TestCase):
+    def test_twenty_advertised_offers_have_links_prices_and_clear_uncertainty(self):
+        row = report(0)
+        row['advertised_offers'] = [dict(candidate=dict(title='هدفون <مدل جدید> ' * 20, url=f'https://shop.example/p/{i}', price_toman=700000, discount_percent=40)) for i in range(20)]
+        row['errors'] = ['Torob discovery failed']
+        row['market_coverage'] = dict(checked=21, provider_status='unavailable', matched_direct_quotes=0)
+        text = digest(row, C)
+        self.assertEqual(text.count('<a href='), 20)
+        self.assertEqual(text.count('تخفیف اعلامی 40٪'), 20)
+        self.assertIn('۷۰۰٬۰۰۰ تومان', text)
+        self.assertIn('کمترین قیمت بازار تأیید نشده', text)
+        self.assertNotIn('٪ زیر قیمت منابع بازار', text)
+        self.assertNotIn('پیدا نشد', text)
+        self.assertLessEqual(visible_length(text), 3900)
+        self.assertNotIn('<مدل جدید>', text)
+
+    def test_mixed_report_distinguishes_verified_from_advertised(self):
+        row = report(1)
+        row['advertised_offers'] = [dict(candidate=dict(title='کالای تخفیف‌دار', url='https://shop.example/unverified', price_toman=500000, discount_percent=25))]
+        text = digest(row, C)
+        self.assertEqual(text.count('<a href='), 2)
+        self.assertIn('1. ✅', text)
+        self.assertIn('2. ⚠️', text)
+        self.assertIn('تخفیف اعلامی 25٪', text)
+
     def test_manual_runs_send_without_consuming_scheduled_slot(self):
         with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'TELEGRAM_BOT_TOKEN':'secret', 'TELEGRAM_CHAT_ID':'@channel', 'DEALRADAR_SCHEDULE_MODE':'slots'}):
             history = History(pathlib.Path(directory)/'h.sqlite')
