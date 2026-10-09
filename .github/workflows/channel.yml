@@ -2,8 +2,8 @@ name: Telegram channel report
 
 on:
   schedule:
-    # UTC: 00:17, 06:17, 12:17, 18:17 (Tehran: 03:47, 09:47, 15:47, 21:47)
-    - cron: '17 */6 * * *'
+    # UTC: 00:17, 12:17 (Tehran: 03:47, 15:47)
+    - cron: '17 */12 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -45,7 +45,7 @@ jobs:
             channel-history-v1-
       - name: Install package
         run: pip install .
-      - name: Collect, verify and publish one digest
+      - name: Collect prices and publish summary plus product posts
         run: python scripts/actions_run.py
       - name: Save history even after a source or delivery failure
         if: always()
