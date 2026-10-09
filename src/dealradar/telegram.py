@@ -1,4 +1,4 @@
-"""One evidence-backed digest per channel and interval, never one message per item."""
+"""One text digest plus product photo albums per reporting invocation."""
 import datetime as dt
 import hashlib
 import html
@@ -82,6 +82,90 @@ def digest(report, config):
     return heading + "".join(blocks) + note + footer
 
 
+def photo_groups(report):
+    """Each photo keeps its own product link, price and confidence caption."""
+    photos = []
+    entries = [(r, True) for r in report['deals']] + [(r, False) for r in report.get('advertised_offers', [])]
+    for index, (row, verified) in enumerate(entries, 1):
+        c = row['candidate']
+        if not c.get('image_url'):
+            continue
+        e = lambda value: html.escape(str(value), quote=True)
+        title = c['title'][:240] + ('…' if len(c['title']) > 240 else '')
+        caption = f'{index}. <a href="{e(safe_url(c["url"]))}">{e(title)}</a>\n💰 {fa_money(c["price_toman"])} تومان'
+        if c.get('discount_percent') is not None:
+            caption += f' · تخفیف اعلامی {c["discount_percent"]:g}٪'
+        if verified:
+            caption += f'\n✅ {row["saving_percent"]:.1f}٪ زیر قیمت منابع بررسی‌شده'
+            if row['comparison_basis'] == 'item_only':
+                caption += '؛ بدون هزینهٔ ارسال'
+        else:
+            caption += '\n⚠️ کمترین قیمت بازار تأیید نشده است.'
+        photos.append(dict(type='photo', media=safe_url(c['image_url']), caption=caption, parse_mode='HTML'))
+    return [photos[i:i+10] for i in range(0, len(photos), 10)]
+
+
+def publish_photos(report, token, channel, settings, *, opener, sleep):
+    if not settings.get('photos_enabled', True):
+        report['telegram_photos'] = dict(status='disabled', sent=0)
+        return
+    groups = photo_groups(report)
+    planned = sum(map(len, groups))
+    count = len(report['deals']) + len(report.get('advertised_offers', []))
+    delivery = dict(status='sent' if planned else 'no_images', planned=planned, sent=0,
+                    missing_images=count-planned, failed_groups=0)
+    report['telegram_photos'] = delivery
+    for group_index, group in enumerate(groups):
+        # Telegram albums require 2..10 items; a final singleton uses sendPhoto.
+        method = 'sendMediaGroup' if len(group) > 1 else 'sendPhoto'
+        body = dict(chat_id=channel, disable_notification=True)
+        if len(group) > 1:
+            body['media'] = group
+        else:
+            p = group[0]
+            body.update(photo=p['media'], caption=p['caption'], parse_mode='HTML')
+        confirmed = False
+        rejected = False
+        sleep(1)
+        for attempt in range(3):
+            try:
+                req = urllib.request.Request(f'https://api.telegram.org/bot{token}/{method}',
+                    data=json.dumps(body).encode(), headers={'Content-Type':'application/json'})
+                with opener(req, timeout=35) as response:
+                    answer = json.load(response)
+                result = answer.get('result')
+                messages = result if isinstance(result, list) else [result]
+                confirmed = bool(answer.get('ok') and len(messages) == len(group) and
+                                 all(isinstance(m, dict) and m.get('message_id') for m in messages))
+                rejected = not answer.get('ok') and answer.get('error_code') == 400
+                break
+            except urllib.error.HTTPError as error:
+                rejected = error.code == 400
+                if error.code == 429 and attempt < 2:
+                    try:
+                        delay = json.load(error).get('parameters', {}).get('retry_after', 5)
+                        if isinstance(delay, (int, float)) and not isinstance(delay, bool) and 0 <= delay <= 30:
+                            sleep(delay)
+                            continue
+                    except (ValueError, TypeError):
+                        pass
+                break
+            except Exception:
+                # A timeout may occur after acceptance: never resend blindly.
+                break
+        if confirmed:
+            delivery['sent'] += len(group)
+        elif rejected and len(group) > 1:
+            # Telegram explicitly rejected the entire album, so no photo was
+            # delivered. Isolate an inaccessible URL without losing good photos.
+            groups[group_index+1:group_index+1] = [[photo] for photo in group]
+        else:
+            delivery['failed_groups'] += 1
+    if delivery['failed_groups'] or delivery['missing_images']:
+        delivery['status'] = 'partial'
+    print('Telegram photos: ' + json.dumps(delivery))
+
+
 def publish(report, history, config, *, opener=urllib.request.urlopen, sleep=time.sleep):
     settings = config.get("telegram", {})
     def status(value, reason=None):
@@ -133,6 +217,9 @@ def publish(report, history, config, *, opener=urllib.request.urlopen, sleep=tim
             history.db.commit()
             status("sent")
             print("Telegram delivery: sent and confirmed")
+            # Keep confirmed text delivery even if a photo URL is inaccessible.
+            # The successful invocation stays deduplicated after a restart.
+            publish_photos(report, token, channel, settings, opener=opener, sleep=sleep)
             return []
         except urllib.error.HTTPError as error:
             # Telegram explicitly rejected a 429 request, so bounded retry is safe.
