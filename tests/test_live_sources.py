@@ -117,3 +117,23 @@ class LiveSources(unittest.TestCase):
         self.assertEqual(evaluate(c,[q,other],config,NOW)['reasons'],['insufficient_independent_sellers'])
         unknown=dataclasses.replace(c,warranty_key='نامشخص')
         self.assertEqual(evaluate(unknown,[q],config,NOW)['reasons'],['unknown_warranty'])
+
+    def test_manufacturer_model_allows_different_title(self):
+        c=dataclasses.replace(dk_card(product(),NOW),brand_name='هیسکا')
+        html=merchant(name='هاب USB-C هیسکا HR53',mpn='HR-53',brand={'name':'هیسکا'})
+        q=equivalent_quote(c,html,'https://shop.example/p','merchant:shop.example',NOW)
+        self.assertEqual(q.price_toman,1500000)
+        q=equivalent_quote(c,merchant(name='هاب USB-C هیسکا HR53'),'https://shop.example/p','merchant:shop.example',NOW)
+        self.assertEqual(q.price_toman,1500000)
+        for changes in [dict(mpn='HR-530'),dict(brand={'name':'برند دیگر'}),dict(name='هاب هیسکا HR53 Pro'),dict(name='هاب هیسکا HR53 بسته 2 عددی')]:
+            args=dict(name='هاب USB-C هیسکا HR53',mpn='HR-53',brand={'name':'هیسکا'});args.update(changes)
+            with self.assertRaises(ValueError):
+                equivalent_quote(c,merchant(**args),'https://shop.example/p','merchant:shop.example',NOW)
+
+    def test_scoped_product_table_supplies_warranty(self):
+        c=dk_card(product(),NOW)
+        table='<table class="woocommerce-product-attributes shop_attributes"><tr><th>گارانتی</th><td>گارانتی 18 ماهه تست</td></tr></table>'
+        q=equivalent_quote(c,merchant(additionalProperty=[])+table,'https://shop.example/p','merchant:shop.example',NOW)
+        self.assertEqual(q.warranty_key,c.warranty_key)
+        with self.assertRaises(ValueError):
+            equivalent_quote(c,merchant(additionalProperty=[])+'<footer>گارانتی 18 ماهه تست</footer>','https://shop.example/p','merchant:shop.example',NOW)
