@@ -1,0 +1,37 @@
+# Fractional hours are supported. The running worker reloads this file.
+interval_hours = 6
+max_items = 20
+min_saving_percent = 15
+min_advertised_discount = 20
+min_market_sellers = 2
+max_evidence_age_hours = 6
+timezone = "Asia/Tehran"
+output_dir = "output"
+database = "data/history.sqlite3"
+
+[digikala]
+enabled = true
+pages = 3
+request_delay_seconds = 3
+
+[torob]
+enabled = true
+max_candidates = 20
+search_results = 2
+shops_per_product = 4
+request_delay_seconds = 1
+max_duration_seconds = 480
+
+[feeds]
+# File paths are relative to this config; HTTPS JSON feeds also work.
+# See examples/market.json for the schema. Optional: direct Digikala and Torob discovery are enabled above.
+candidates = []
+market = []
+
+[telegram]
+enabled = true
+token_env = "TELEGRAM_BOT_TOKEN"
+chat_id_env = "TELEGRAM_CHAT_ID"
+
+# Optional HTTPS URL of the published full report.
+# report_url = "https://your-site.example/deals/"
