@@ -16,6 +16,11 @@ def configure(config, env):
     config["database"] = "data/history.sqlite3"
     config["output_dir"] = "output"
     config.setdefault("telegram", {})["enabled"] = True
+    manual_id = env.get("DEALRADAR_MANUAL_RUN_ID", "")
+    if manual_id:
+        if not re.fullmatch(r"[0-9]+-[0-9]+", manual_id):
+            raise ValueError("Invalid manual workflow run identifier")
+        config["telegram"]["manual_run_id"] = manual_id
     for env_key, kind in [("MARKET_FEED_URL", "market"), ("CANDIDATE_FEED_URL", "candidates")]:
         if env.get(env_key):
             config.setdefault("feeds", {})[kind] = [safe_url(env[env_key])]
@@ -33,6 +38,7 @@ def main():
         raise SystemExit("Configuration invalid: check repository secrets and HTTPS feed URLs") from None
     row = run_once(config, send=not dry)
     print(f"Generated report: {len(row['deals'])} verified deals; {len(row['errors'])} errors; preview={dry}")
+    print("Telegram delivery: " + json.dumps(row.get("telegram_delivery", {"status": "preview" if dry else "unknown"})))
     print("Market coverage: " + json.dumps(row.get("market_coverage", {}), ensure_ascii=False))
     source_failures = Counter()
     for error in row["errors"]:
