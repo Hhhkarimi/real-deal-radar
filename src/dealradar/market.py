@@ -61,9 +61,12 @@ class ProductAttributes(HTMLParser):
 
 
 def product_identity(candidate, product, attrs):
+    code = model_code(candidate.title)
+    explicit_mpn = product.get("mpn") or attrs.get(normalized("مدل")) or attrs.get("model")
+    if code and explicit_mpn and re.sub(r"[^a-z0-9]", "", str(explicit_mpn).lower()) != code:
+        return False
     if normalized(product.get("name", "")) == normalized(candidate.title):
         return True
-    code = model_code(candidate.title)
     # Distinct seller prose is accepted only with a concrete manufacturer/model
     # identifier. Numerical generic models (e.g. clothing 311) fail closed.
     mpn = product.get("mpn") or attrs.get(normalized("مدل")) or attrs.get("model")
@@ -84,7 +87,7 @@ def product_identity(candidate, product, attrs):
     elif " " + normalized(candidate.brand_name) + " " not in " " + normalized(product.get("name", "")) + " ":
         return False
     # Pack counts, capacity options and edition suffixes can vary within a model.
-    for pattern in [r"بسته\s*(\d+)\s*(?:عددی|تایی)", r"(\d+)\s*(?:GB|TB|گیگابایت|ترابایت)", r"\b(pro|plus|max|mini|ultra)\b"]:
+    for pattern in [r"بسته\s*(\d+)\s*(?:عددی|تایی)", r"(\d+)\s*(?:GB|TB|گیگابایت|ترابایت)", r"\b(pro|plus|max|mini|ultra|anc|nc|se|lte|nfc|4g|5g|l)\b"]:
         a = re.findall(pattern, normalized(candidate.title), flags=re.I)
         b = re.findall(pattern, normalized(product.get("name", "")), flags=re.I)
         if sorted(a) != sorted(b): return False
