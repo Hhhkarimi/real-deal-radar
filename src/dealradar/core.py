@@ -53,6 +53,7 @@ class Offer:
     color_name: str = ""
     size_name: str = ""
     brand_name: str = ""
+    image_url: str | None = None
 
     @classmethod
     def parse(cls, row: dict) -> "Offer":
@@ -73,6 +74,8 @@ class Offer:
             raise ValueError("discount_percent must be between 0 and 100")
         values = {f.name: row[f.name] for f in dataclasses.fields(cls) if f.name in row}
         values["url"] = safe_url(row["url"])
+        if row.get("image_url"):
+            values["image_url"] = safe_url(row["image_url"])
         values["price_toman"] = money(row["price_toman"])
         values["shipping_toman"] = None if row["shipping_toman"] is None else money(row["shipping_toman"])
         return cls(**values)
