@@ -84,7 +84,7 @@ class Offer:
 def load_config(path: pathlib.Path, override: float | None = None) -> dict:
     with path.open("rb") as stream:
         c = tomllib.load(stream)
-    c.setdefault("interval_hours", 6)
+    c.setdefault("interval_hours", 12)
     if override is not None:
         c["interval_hours"] = override
     for key, default in [("max_items", 20), ("min_saving_percent", 15), ("min_advertised_discount", 20),
