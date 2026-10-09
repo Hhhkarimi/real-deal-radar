@@ -7,7 +7,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from dealradar.core import Offer, UTC, History, evaluate, load_config
+from dealradar.core import Offer, UTC, History, evaluate, load_config, advertised_shortlist
 from dealradar.sources import merchant_quote
 from dealradar.telegram import publish
 from dealradar.cli import worker, run_once
@@ -31,6 +31,34 @@ def quotes():
 
 
 class EngineTests(unittest.TestCase):
+    def test_advertised_shortlist_excludes_invalid_offers_and_ranks_discounts(self):
+        candidates = [offer(product_key='dkp:low', discount_percent=30), offer(product_key='dkp:high', discount_percent=60),
+                      offer(product_key='dkp:grocery', supermarket=True, discount_percent=90),
+                      offer(product_key='dkp:expired', expires_at=NOW.isoformat()), offer(product_key='dkp:unavailable', in_stock=False),
+                      offer(product_key='dkp:small', discount_percent=10), offer(product_key='dkp:stale', observed_at=(NOW-dt.timedelta(hours=7)).isoformat())]
+        rows = [evaluate(c, [], C, NOW) for c in candidates]
+        selected = advertised_shortlist(rows, C, NOW, 20)
+        self.assertEqual([r['candidate']['product_key'] for r in selected], ['dkp:high', 'dkp:low'])
+        self.assertTrue(all(r['status'] != 'verified' for r in selected))
+        self.assertEqual(len(advertised_shortlist(rows, C, NOW, 1)), 1)
+
+    def test_market_outage_still_produces_twenty_advertised_offers_in_saved_reports(self):
+        with tempfile.TemporaryDirectory() as directory:
+            now = dt.datetime.now(UTC)
+            candidates = [offer(product_key=f'dkp:{i}', url=f'https://dk.example/p/{i}', observed_at=now.isoformat()) for i in range(25)]
+            config = dict(C, _base=pathlib.Path(directory), max_items=20, interval_hours=6, telegram={'enabled':False})
+            with patch('dealradar.cli.collect', return_value=(candidates, [], ['Torob discovery failed: HTTP 490'])):
+                report = run_once(config, send=False)
+            self.assertEqual(len(report['deals']), 0)
+            self.assertEqual(len(report['advertised_offers']), 20)
+            saved = json.loads((pathlib.Path(directory)/'output/latest.json').read_text())
+            self.assertEqual(len(saved['advertised_offers']), 20)
+            html = (pathlib.Path(directory)/'output/channel-post.html').read_text()
+            self.assertEqual(html.count('<a href='), 20)
+            self.assertIn('کمترین قیمت بازار تأیید نشده', html)
+            markdown = (pathlib.Path(directory)/'output/latest.md').read_text()
+            self.assertIn('https://dk.example/p/0', markdown)
+
     def test_compare_against_lowest_not_average(self):
         row = evaluate(offer(), quotes(), C, NOW)
         self.assertEqual((row["status"], row["saving_percent"], row["market_low_toman"]), ("verified", 30, 1000))
