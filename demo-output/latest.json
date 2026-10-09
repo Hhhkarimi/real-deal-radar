@@ -1,0 +1,74 @@
+{
+  "generated_at": "2026-10-09T09:10:17.218810+00:00",
+  "interval_hours": 6,
+  "max_items": 20,
+  "candidate_count": 1,
+  "demo": true,
+  "deals": [
+    {
+      "candidate": {
+        "product_key": "demo:headphone-1",
+        "title": "هدفون نمونه — دادهٔ ساختگی",
+        "url": "https://digikala.example/product/demo",
+        "seller_id": "demo:dk",
+        "price_toman": 700000,
+        "shipping_toman": null,
+        "variant_key": "black",
+        "warranty_key": "18-month-demo",
+        "observed_at": "2026-10-09T08:56:21.907989+00:00",
+        "in_stock": true,
+        "category": "هدفون",
+        "supermarket": false,
+        "discount_percent": 50,
+        "expires_at": null,
+        "product_id": null
+      },
+      "status": "verified",
+      "reasons": [],
+      "evidence": [
+        {
+          "product_key": "demo:headphone-1",
+          "title": "هدفون نمونه — دادهٔ ساختگی",
+          "url": "https://merchant0.example/product/demo",
+          "seller_id": "demo:merchant-0",
+          "price_toman": 1000000,
+          "shipping_toman": null,
+          "variant_key": "black",
+          "warranty_key": "18-month-demo",
+          "observed_at": "2026-10-09T08:56:21.907989+00:00",
+          "in_stock": true,
+          "category": "هدفون",
+          "supermarket": false,
+          "discount_percent": 0,
+          "expires_at": null,
+          "product_id": null
+        },
+        {
+          "product_key": "demo:headphone-1",
+          "title": "هدفون نمونه — دادهٔ ساختگی",
+          "url": "https://merchant1.example/product/demo",
+          "seller_id": "demo:merchant-1",
+          "price_toman": 1100000,
+          "shipping_toman": null,
+          "variant_key": "black",
+          "warranty_key": "18-month-demo",
+          "observed_at": "2026-10-09T08:56:21.907989+00:00",
+          "in_stock": true,
+          "category": "هدفون",
+          "supermarket": false,
+          "discount_percent": 0,
+          "expires_at": null,
+          "product_id": null
+        }
+      ],
+      "market_low_toman": 1000000,
+      "saving_toman": 300000,
+      "saving_percent": 30.0,
+      "comparison_basis": "item_only",
+      "previous_30d_low_toman": null
+    }
+  ],
+  "audit": [],
+  "verified_not_shown": 0,
+  "errors": []
+}
