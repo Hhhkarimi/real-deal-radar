@@ -30,6 +30,32 @@ def merchant(**overrides):
 
 
 class LiveSources(unittest.TestCase):
+    def test_bestsellers_keep_source_rank_and_allow_zero_discount(self):
+        from dealradar.sources import collect_bestsellers
+        a = product(); a['id'] = 1; a['default_variant']['price']['discount_percent'] = 0
+        b = product(); b['id'] = 2
+        grocery = product(); grocery['id'] = 3; grocery['category'] = {'is_supermarket':True}
+        global_data = {'data':{'products':[grocery,a], 'categories':[{'id':5966,'code':'electronic-devices','title_fa':'کالای دیجیتال'}]}}
+        category_data = {'data':{'products':[a,b]}}
+        config = {'max_evidence_age_hours':6, 'bestsellers':{'enabled':True,'max_items':2,'category_codes':['electronic-devices']}}
+        with patch('dealradar.sources.fetch',side_effect=[json.dumps(global_data),json.dumps(category_data)]) as get, patch('dealradar.sources.time.sleep'):
+            rows, errors = collect_bestsellers(config, NOW)
+        self.assertEqual(errors, [])
+        self.assertEqual([r['candidate']['product_key'] for r in rows], ['dkp:1','dkp:2'])
+        self.assertEqual(rows[0]['candidate']['discount_percent'], 0)
+        self.assertEqual(rows[0]['source_rank'], 2)
+        self.assertEqual(rows[0]['ranking_scope'], 'سراسری دیجی‌کالا')
+        self.assertEqual(rows[1]['ranking_scope'], 'کالای دیجیتال')
+        self.assertIn('category_id=5966', get.call_args_list[1].args[0])
+
+    def test_bestseller_outage_does_not_fabricate_a_list(self):
+        from dealradar.sources import collect_bestsellers
+        with patch('dealradar.sources.fetch',side_effect=RuntimeError('HTTP 429 from api.digikala.com')) as get:
+            rows, errors = collect_bestsellers({'max_evidence_age_hours':6,'bestsellers':{'enabled':True}}, NOW)
+        self.assertEqual(rows, [])
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(get.call_count, 1)
+
     def test_digikala_image_extraction_prefers_main_non_webp_url(self):
         p = product()
         p['images'] = {'main':{'url':['http://bad.example/p.jpg','https://images.example/product.jpg'], 'webp_url':['https://images.example/product.webp']}}
