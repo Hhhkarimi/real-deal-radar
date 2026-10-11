@@ -31,6 +31,22 @@ def quotes():
 
 
 class EngineTests(unittest.TestCase):
+    def test_bestsellers_are_saved_even_if_discount_feed_fails(self):
+        now = dt.datetime.now(UTC)
+        row = dict(candidate=dataclasses.asdict(offer(observed_at=now.isoformat(), discount_percent=0)),
+                   list_kind='bestseller',source_rank=7,ranking_scope='کالای دیجیتال')
+        with tempfile.TemporaryDirectory() as directory:
+            config = dict(C,_base=pathlib.Path(directory),max_items=20,interval_hours=12,bestsellers={'enabled':True})
+            with patch('dealradar.cli.collect',return_value=([],[],['Digikala discount feed failed'])), patch('dealradar.cli.collect_bestsellers',return_value=([row],[])):
+                report = run_once(config,send=False)
+            self.assertEqual(report['deals'],[])
+            self.assertEqual(report['bestsellers'],[row])
+            saved = json.loads((pathlib.Path(directory)/'output/latest.json').read_text())
+            self.assertEqual(saved['bestsellers'][0]['source_rank'],7)
+            markdown = (pathlib.Path(directory)/'output/latest.md').read_text()
+            self.assertIn('کالاهای پرفروش',markdown)
+            self.assertIn('جایگاه 7 در فهرست کالای دیجیتال',markdown)
+
     def test_advertised_shortlist_excludes_invalid_offers_and_ranks_discounts(self):
         candidates = [offer(product_key='dkp:low', discount_percent=30), offer(product_key='dkp:high', discount_percent=60),
                       offer(product_key='dkp:grocery', supermarket=True, discount_percent=90),
