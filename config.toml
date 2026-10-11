@@ -28,6 +28,12 @@ max_duration_seconds = 480
 candidates = []
 market = []
 
+[bestsellers]
+enabled = true
+max_items = 20
+category_codes = ["electronic-devices", "home-and-kitchen", "apparel", "home-appliance"]
+request_delay_seconds = 3
+
 [telegram]
 enabled = true
 photos_enabled = true
