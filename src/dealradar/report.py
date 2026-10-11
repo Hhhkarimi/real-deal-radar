@@ -26,7 +26,7 @@ def write_reports(report, destination, timezone):
     when = dt.datetime.fromisoformat(report["generated_at"]).astimezone(ZoneInfo(timezone)).strftime("%Y-%m-%d %H:%M")
     rows = report["deals"]
     advertised = report.get("advertised_offers", [])
-    heading = "گزارش تخفیف‌های دیجی‌کالا" if advertised else "گزارش تخفیف واقعی"
+    heading = "گزارش کالاهای دیجی‌کالا" if report.get("bestsellers_enabled") else ("گزارش تخفیف‌های دیجی‌کالا" if advertised else "گزارش تخفیف واقعی")
     cards = []
     markdown = ["# " + heading + (" — دادهٔ نمایشی" if report["demo"] else ""),
                 f"زمان بررسی: {when} ({timezone})", f"فاصلهٔ بررسی: {report['interval_hours']} ساعت", ""]
@@ -56,6 +56,15 @@ def write_reports(report, destination, timezone):
             c = row['candidate']
             cards.append(f'<article><h2><a href="{e(c["url"])}" rel="noopener noreferrer">{e(c["title"])}</a></h2><p class="price">{fa_money(c["price_toman"])} تومان · تخفیف اعلامی {c["discount_percent"]:g}٪</p><p>⚠️ کمترین قیمت بازار تأیید نشده</p><p>رنگ: {e(c.get("color_name") or "بدون رنگ مشخص")} · سایز: {e(c.get("size_name") or "بدون سایز مشخص")} · گارانتی: {e(c["warranty_key"])}</p></article>')
             markdown.extend([f'### {c["title"]}', f'قیمت: {fa_money(c["price_toman"])} تومان · تخفیف اعلامی: {c["discount_percent"]:g}٪', f'خرید: {c["url"]}', '⚠️ کمترین قیمت بازار تأیید نشده', ''])
+    bestsellers = report.get('bestsellers', [])
+    if bestsellers:
+        cards.append('<h2>کالاهای پرفروش دیجی‌کالا</h2>')
+        markdown.extend(['## کالاهای پرفروش دیجی‌کالا', 'پرفروش بودن تضمین کمترین قیمت نیست؛ جایگاه هر کالا مربوط به فهرست ذکرشده است.', ''])
+        for row in bestsellers:
+            c = row['candidate']
+            rank = f'جایگاه {row["source_rank"]} در فهرست {row["ranking_scope"]}'
+            cards.append(f'<article><h2><a href="{e(c["url"])}">{e(c["title"])}</a></h2><p>{fa_money(c["price_toman"])} تومان · تخفیف اعلامی {c["discount_percent"]:g}٪</p><p>{e(rank)}</p><p>پرفروش بودن تضمین کمترین قیمت نیست.</p></article>')
+            markdown.extend([f'### {c["title"]}', f'قیمت: {fa_money(c["price_toman"])} تومان · تخفیف اعلامی: {c["discount_percent"]:g}٪', f'خرید: {c["url"]}', rank, ''])
     audit = "".join(f"<tr><td>{e(r['candidate']['title'])}</td><td>{e('؛ '.join(REASONS.get(reason, reason) for reason in r['reasons']))}</td></tr>" for r in report["audit"])
     errors = "".join(f"<li>{e(error)}</li>" for error in report["errors"])
     coverage = ""
