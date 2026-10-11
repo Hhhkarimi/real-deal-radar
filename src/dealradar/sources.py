@@ -1,5 +1,6 @@
 """HTTP adapters. Digikala's public web endpoint is unofficial and may change."""
 import datetime as dt
+import dataclasses
 import json
 import http.cookiejar
 import pathlib
@@ -10,7 +11,7 @@ import urllib.request
 from html.parser import HTMLParser
 from urllib.parse import urlsplit, quote
 
-from .core import Offer, UTC, safe_url
+from .core import Offer, UTC, safe_url, fresh
 
 
 HTTP = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
@@ -170,6 +171,65 @@ def dk_card(product, now):
 def dk_details(product_id, now):
     data = json.loads(fetch(f"https://api.digikala.com/v2/product/{int(product_id)}/"))
     return dk_card(data["data"]["product"], now)
+
+
+def collect_bestsellers(config, now):
+    settings = config.get("bestsellers", {})
+    if not settings.get("enabled", False):
+        return [], []
+    limit = int(settings.get("max_items", 20))
+    codes = settings.get("category_codes", ["electronic-devices", "home-and-kitchen", "apparel", "home-appliance"])
+    if not 1 <= limit <= 60 or not isinstance(codes, list) or len(codes) > 8 or any(not isinstance(c, str) for c in codes):
+        raise ValueError("Bestseller limits: items 1..60, up to 8 categories")
+    selected, errors, seen = [], [], set()
+    def eligible(rows, scope, category_id=None):
+        result = []
+        for rank, p in enumerate(rows, 1):
+            try:
+                c = dk_card(p, now)
+                if not c.supermarket and c.in_stock and c.price_toman > 0 and fresh(c, now, config["max_evidence_age_hours"]):
+                    result.append(dict(candidate=dataclasses.asdict(c), list_kind="bestseller", source_rank=rank,
+                                       ranking_scope=scope, source_category_id=category_id))
+            except (KeyError, ValueError, TypeError):
+                continue
+        return result
+    def append(row):
+        key = row['candidate']['product_key']
+        if key not in seen and len(selected) < limit:
+            selected.append(row); seen.add(key)
+    try:
+        data = json.loads(fetch("https://api.digikala.com/v1/best-selling/", attempts=1))["data"]
+        if not isinstance(data.get("products"), list):
+            raise ValueError("Bestseller response schema changed")
+        for row in eligible(data["products"], "سراسری دیجی‌کالا"):
+            append(row)
+    except Exception as error:
+        return [], ["Digikala bestsellers: " + str(error)]
+    pools = []
+    categories = {c.get("code"): c for c in data.get("categories", [])}
+    if len(selected) < limit:
+        for code in codes:
+            category = categories.get(code)
+            if not category:
+                continue
+            time.sleep(max(3, float(settings.get("request_delay_seconds", 3))))
+            try:
+                category_id = int(category["id"])
+                body = json.loads(fetch(f"https://api.digikala.com/v1/best-selling/?category_id={category_id}", attempts=1))["data"]
+                if not isinstance(body.get("products"), list):
+                    raise ValueError("Bestseller category schema changed")
+                pools.append(eligible(body["products"], category.get("title_fa") or code, category_id))
+            except Exception as error:
+                errors.append("Digikala bestsellers category: " + str(error))
+                if any(f"HTTP {s}" in str(error) for s in (403, 429, 490)):
+                    break
+    # Category ranks remain scoped to their category, never presented as a
+    # fabricated overall sales ranking. Rotate categories for a varied shortlist.
+    while any(pools) and len(selected) < limit:
+        for pool in pools:
+            if pool:
+                append(pool.pop(0))
+    return selected, errors
 
 
 def collect(config, now):
