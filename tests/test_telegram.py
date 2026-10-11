@@ -26,6 +26,28 @@ P = dict(C, interval_hours=12, telegram=dict(enabled=True, photos_enabled=True))
 
 
 class TelegramTests(unittest.TestCase):
+    def test_twenty_discounted_and_twenty_bestsellers_have_separate_sections(self):
+        row = report(0)
+        candidate = dict(title='کالا', url='https://shop.example/p',image_url='https://images.example/p.jpg',price_toman=700000,discount_percent=0)
+        row['advertised_offers'] = [dict(candidate=dict(candidate, discount_percent=30)) for i in range(20)]
+        row['bestsellers'] = [dict(candidate=candidate,list_kind='bestseller',source_rank=i+1,ranking_scope='کالای دیجیتال') for i in range(20)]
+        row['bestsellers_enabled'] = True
+        calls = []
+        def opener(req, **kwargs):
+            calls.append((req.full_url, json.loads(req.data)))
+            return io.BytesIO(b'{"ok":true,"result":{"message_id":42}}')
+        with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ',{'TELEGRAM_BOT_TOKEN':'secret','TELEGRAM_CHAT_ID':'@channel'}):
+            h = History(pathlib.Path(directory)/'h.sqlite')
+            self.assertEqual(publish(row,h,P,opener=opener,sleep=lambda _:None), [])
+            h.close()
+        self.assertEqual(len(calls),42)
+        self.assertTrue(calls[20][0].endswith('/sendPhoto'))
+        self.assertIn('گزارش کالاهای پرفروش', calls[21][1]['text'])
+        self.assertIn('پرفروش 1', calls[22][1]['caption'])
+        self.assertIn('جایگاه 1 در فهرست کالای دیجیتال', calls[22][1]['caption'])
+        self.assertNotIn('٪ زیر قیمت منابع', calls[22][1]['caption'])
+        self.assertEqual(row['telegram_photos']['sent'],40)
+
     def test_twenty_products_send_summary_then_individual_captioned_photos(self):
         row = report(0)
         row['interval_hours'] = 12
