@@ -86,14 +86,22 @@ def photo_groups(report):
     """Each photo keeps its own product link, price and confidence caption."""
     photos = []
     entries = [(r, True) for r in report['deals']] + [(r, False) for r in report.get('advertised_offers', [])]
+    discount_count = len(entries)
+    entries += [(r, False) for r in report.get('bestsellers', [])]
     for index, (row, verified) in enumerate(entries, 1):
         c = row['candidate']
         e = lambda value: html.escape(str(value), quote=True)
         title = c['title'][:240] + ('…' if len(c['title']) > 240 else '')
         caption = f'{index}. <a href="{e(safe_url(c["url"]))}">{e(title)}</a>\n💰 {fa_money(c["price_toman"])} تومان'
+        bestseller = row.get('list_kind') == 'bestseller'
+        if bestseller:
+            caption = f'🏆 پرفروش {index-discount_count}\n' + caption.split('. ', 1)[1]
         if c.get('discount_percent') is not None:
             caption += f' · تخفیف اعلامی {c["discount_percent"]:g}٪'
-        if verified:
+        if bestseller:
+            caption += f'\nجایگاه {row["source_rank"]} در فهرست {e(row["ranking_scope"])}'
+            caption += '\n⚠️ پرفروش بودن به معنی کمترین قیمت بازار نیست.'
+        elif verified:
             caption += f'\n✅ {row["saving_percent"]:.1f}٪ زیر قیمت منابع بررسی‌شده'
             if row['comparison_basis'] == 'item_only':
                 caption += '؛ بدون هزینهٔ ارسال'
@@ -109,9 +117,13 @@ def publish_photos(report, token, channel, settings, *, opener, sleep):
         return
     groups = [[photo] for group in photo_groups(report) for photo in group]
     planned = sum(map(len, groups))
-    count = len(report['deals']) + len(report.get('advertised_offers', []))
+    count = len(report['deals']) + len(report.get('advertised_offers', [])) + len(report.get('bestsellers', []))
+    if report.get('bestsellers_enabled') or report.get('bestsellers'):
+        n = len(report.get('bestsellers', []))
+        heading = f'🏆 <b>گزارش کالاهای پرفروش</b>\n{n} کالای موجود و غیرسوپرمارکتی از فهرست پرفروش‌های سراسری و دسته‌های دیجی‌کالا.\nرتبهٔ هر کالا مربوط به فهرست ذکرشده در کپشن است؛ پرفروش بودن تضمین ارزان‌ترین بودن نیست.'
+        groups.insert(len(report['deals']) + len(report.get('advertised_offers', [])), [dict(media=None, caption=heading, section_header=True)])
     delivery = dict(status='sent' if planned else 'no_images', planned=planned, sent=0,
-                    missing_images=sum(not g[0]['media'] for g in groups), failed_groups=0, photos_sent=0)
+                    missing_images=sum(not g[0]['media'] and not g[0].get('section_header') for g in groups), failed_groups=0, photos_sent=0)
     report['telegram_photos'] = delivery
     for group_index, group in enumerate(groups):
         # One self-contained message per product, never an album.
@@ -152,7 +164,7 @@ def publish_photos(report, token, channel, settings, *, opener, sleep):
                 # A timeout may occur after acceptance: never resend blindly.
                 break
         if confirmed:
-            delivery['sent'] += len(group)
+            delivery['sent'] += 0 if p.get('section_header') else len(group)
             delivery['photos_sent'] += bool(p['media'])
         elif rejected and p['media']:
             # A rejected image does not remove the product's caption/link.
@@ -171,10 +183,12 @@ def summary(report, config):
     advertised = len(report.get('advertised_offers', []))
     text = f'🔎 <b>گزارش تخفیف‌های دیجی‌کالا</b>\n🕒 {now:%Y-%m-%d %H:%M}\nبررسی هر {report["interval_hours"]} ساعت · {report["candidate_count"]} کالای بررسی‌شده\n'
     text += f'📦 {verified + advertised} کالا · ✅ {verified} دارای شواهد بازار · ⚠️ {advertised} تخفیف اعلامی\n'
+    if report.get('bestsellers_enabled') or report.get('bestsellers'):
+        text += f'🏆 بخش دوم: {len(report.get("bestsellers", []))} کالای پرفروش از فهرست سراسری و دسته‌های دیجی‌کالا\n'
     if verified + advertised:
         text += '\nمشخصات و لینک خرید هر کالا در پیام تصویری جداگانهٔ بعدی می‌آید.\n'
     else:
-        text += '\nکالای واجد شرایط پیدا نشد.\n'
+        text += '\nکالای پرتخفیف واجد شرایط پیدا نشد.\n'
     text += '\n⚠️ برای تخفیف‌های اعلامی، کمترین قیمت بازار تأیید نشده است. قیمت سبد، موجودی و گارانتی را پیش از خرید بررسی کنید.'
     if report.get('errors'):
         text += '\nدریافت بعضی منابع ناموفق بود؛ پوشش بازار کامل نیست.'
