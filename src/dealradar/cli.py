@@ -8,7 +8,7 @@ import time
 
 from .core import History, UTC, evaluate, identity, load_config, advertised_shortlist
 from .report import write_reports
-from .sources import collect, dk_details
+from .sources import collect, dk_details, collect_bestsellers
 from .telegram import digest, publish
 
 LOG = logging.getLogger("dealradar")
@@ -70,10 +70,13 @@ def run_once(config, *, demo=False, send=True):
         verified = sorted((r for r in results if r["status"] == "verified"), key=lambda r: (-r["saving_percent"], -r["saving_toman"]))
         deals = verified[:config["max_items"]]
         advertised = advertised_shortlist(results, config, dt.datetime.now(UTC), config["max_items"] - len(deals))
+        bestsellers, bestseller_errors = ([], []) if demo else collect_bestsellers(config, dt.datetime.now(UTC))
+        errors.extend(bestseller_errors)
         report = dict(generated_at=dt.datetime.now(UTC).isoformat(), interval_hours=config["interval_hours"],
                       max_items=config["max_items"], candidate_count=len(candidates), demo=demo,
                       deals=deals, audit=[r for r in results if r["status"] != "verified"],
                       advertised_offers=advertised,
+                      bestsellers=bestsellers, bestsellers_enabled=config.get("bestsellers", {}).get("enabled", False),
                       verified_not_shown=max(0, len(verified) - len(deals)), errors=errors)
         if config.get("_market_coverage"):
             report["market_coverage"] = config["_market_coverage"]
@@ -129,7 +132,7 @@ def main():
             worker(args.config, args.interval_hours, stop)
         else:
             report = run_once(config, demo=args.command == "demo", send=args.command != "preview")
-            if report["errors"] and not report["candidate_count"]:
+            if report["errors"] and not report["candidate_count"] and not report.get("bestsellers"):
                 raise SystemExit(2)
     except (ValueError, FileNotFoundError, KeyError, TypeError) as error:
         parser.exit(2, f"Configuration/data error: {error}\n")
