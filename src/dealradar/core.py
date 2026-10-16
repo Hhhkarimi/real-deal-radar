@@ -54,6 +54,7 @@ class Offer:
     size_name: str = ""
     brand_name: str = ""
     image_url: str | None = None
+    category_group: str = ""
 
     @classmethod
     def parse(cls, row: dict) -> "Offer":
@@ -84,7 +85,7 @@ class Offer:
 def load_config(path: pathlib.Path, override: float | None = None) -> dict:
     with path.open("rb") as stream:
         c = tomllib.load(stream)
-    c.setdefault("interval_hours", 12)
+    c.setdefault("interval_hours", 24)
     if override is not None:
         c["interval_hours"] = override
     for key, default in [("max_items", 20), ("min_saving_percent", 15), ("min_advertised_discount", 20),
@@ -102,6 +103,10 @@ def load_config(path: pathlib.Path, override: float | None = None) -> dict:
             raise ValueError(f"{key} must be between {low} and {high}")
     if not isinstance(c["min_market_sellers"], int) or not isinstance(c["max_items"], int):
         raise ValueError("max_items and min_market_sellers must be integers")
+    grouping = c.get('grouping', {})
+    per_category = grouping.get('items_per_category', 5)
+    if isinstance(per_category, bool) or not isinstance(per_category, int) or not 1 <= per_category <= 20:
+        raise ValueError('items_per_category must be an integer from 1 to 20')
     c["_base"] = path.resolve().parent
     return c
 
