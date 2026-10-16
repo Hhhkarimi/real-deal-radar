@@ -27,7 +27,7 @@ class TorobMCP:
         self.buffer, self.identifier = b'', 0
         try:
             self.rpc('initialize', dict(protocolVersion='2025-03-26', capabilities={},
-                     clientInfo=dict(name='real-deal-radar', version='0.7.0')), timeout=15)
+                     clientInfo=dict(name='real-deal-radar', version='0.8.0')), timeout=15)
             self.write(dict(jsonrpc='2.0', method='notifications/initialized'))
         except Exception:
             self.close()

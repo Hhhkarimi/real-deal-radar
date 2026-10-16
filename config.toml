@@ -10,9 +10,17 @@ output_dir = "output"
 database = "data/history.sqlite3"
 
 [grouping]
-enabled = true
+enabled = false
 items_per_category = 5
 category_level = "type"
+
+[showcase]
+enabled = true
+max_items = 25
+discount_items = 15
+bestseller_items = 10
+max_per_type = 2
+price_change_percent = 5
 
 [digikala]
 enabled = true

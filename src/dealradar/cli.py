@@ -1,6 +1,8 @@
 import argparse
 import datetime as dt
 import logging
+import os
+import hashlib
 import pathlib
 import signal
 import threading
@@ -12,6 +14,7 @@ from .sources import collect, dk_details, collect_bestsellers
 from .telegram import digest, publish
 from .grouping import select_groups, flatten
 from .pricing import enrich_prices, selection_reason
+from .showcase import select_showcase, item_due
 
 LOG = logging.getLogger("dealradar")
 
@@ -94,6 +97,20 @@ def run_once(config, *, demo=False, send=True):
             advertised = [r for r in chosen if r['status'] != 'verified']
             bestseller_groups = select_groups(bestsellers, per_category, bestsellers=True,category_level=category_level)
             bestsellers = flatten(bestseller_groups)
+        showcase=config.get('showcase',{}).get('enabled',False)
+        showcase_items=[]
+        if showcase:
+            settings=config['showcase']
+            channel=os.environ.get(config.get('telegram',{}).get('chat_id_env','TELEGRAM_CHAT_ID'))
+            channel_key=hashlib.sha256(channel.encode()).hexdigest() if channel else None
+            due=lambda c:item_due(history,channel_key,c,float(settings.get('price_change_percent',5))) if channel_key else True
+            eligible=verified+advertised_shortlist(results,config,dt.datetime.now(UTC),len(results))
+            showcase_items=select_showcase(eligible,bestsellers,settings,due=due)
+            discount_items=[r for r in showcase_items if r['showcase_section']=='discount']
+            deals=[r for r in discount_items if r['status']=='verified']
+            advertised=[r for r in discount_items if r['status']!='verified']
+            bestsellers=[r for r in showcase_items if r['showcase_section']=='bestseller']
+            grouped=False
         report = dict(generated_at=dt.datetime.now(UTC).isoformat(), interval_hours=config["interval_hours"],
                       max_items=config["max_items"], candidate_count=len(candidates), demo=demo,
                       deals=deals, audit=[r for r in results if r["status"] != "verified"],
@@ -105,6 +122,8 @@ def run_once(config, *, demo=False, send=True):
             report.update(grouped=True, items_per_category=per_category,
                           discount_groups=discount_groups, bestseller_groups=bestseller_groups,
                           max_items=per_category*len(discount_groups))
+        if showcase:
+            report.update(showcase=True,showcase_items=showcase_items,max_items=settings.get('max_items',25))
         if config.get("_market_coverage"):
             report["market_coverage"] = config["_market_coverage"]
             if report['market_coverage'].get('provider_status')=='unavailable':

@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 
 from .core import safe_url
 from .report import fa_money
+from .showcase import item_key, mark_item
 
 
 def visible_length(text):
@@ -113,9 +114,33 @@ def comparison_caption(row):
     return text
 
 
+def compact_photo(row):
+    c=row['candidate'];e=lambda value:html.escape(str(value),quote=True)
+    title=' '.join(c['title'].split());title=title[:65]+('…' if len(title)>65 else '')
+    icon='🏆' if row.get('showcase_section')=='bestseller' else '💸'
+    lines=[f'{icon} <b>{e(title)}</b>',f'💰 {fa_money(c["price_toman"])} تومان · تخفیف اعلامی {c.get("discount_percent",0):g}٪']
+    p=row.get('price_comparison',{});count=p.get('comparable_shop_count',0)
+    confidence=p.get('confidence','none')
+    if count:
+        saving=p['saving_percent'];relation='کمتر' if saving>0 else 'بیشتر' if saving<0 else 'برابر'
+        lines.append(f'📊 تربِ همسان: {fa_money(p["market_low_toman"])} تومان · {abs(saving):g}٪ {relation}')
+    else:lines.append('🟡 قیمت همسان تأیید نشد' if confidence=='partial' else '⚪ قیمت بازار دریافت نشد')
+    badge={'high':'🟢 تطبیق ترب','partial':'🟡 ناقص','none':'⚪ بدون تأیید'}.get(confidence,'⚪ بدون تأیید')
+    links=f'<a href="{e(safe_url(c["url"]))}">خرید</a>'
+    if p.get('torob_url'):
+        try:links+=f' | <a href="{e(safe_url(p["torob_url"]))}">ترب</a>'
+        except ValueError:pass
+    lines.append(badge+' · '+links)
+    return dict(type='photo',media=safe_url(c['image_url']) if c.get('image_url') else None,
+                caption='\n'.join(lines),parse_mode='HTML',item_key=item_key(c),price_toman=c['price_toman'])
+
+
 def photo_groups(report):
     """Each photo keeps its own product link, price and confidence caption."""
     photos = []
+    if report.get('showcase'):
+        photos=[compact_photo(row) for row in report['showcase_items']]
+        return [photos[i:i+10] for i in range(0,len(photos),10)]
     entries = [(r, True) for r in report['deals']] + [(r, False) for r in report.get('advertised_offers', [])]
     discount_count = len(entries)
     entries += [(r, False) for r in report.get('bestsellers', [])]
@@ -155,14 +180,16 @@ def photo_groups(report):
     return [photos[i:i+10] for i in range(0, len(photos), 10)]
 
 
-def publish_photos(report, token, channel, settings, *, opener, sleep):
+def publish_photos(report, token, channel, settings, *, opener, sleep, history=None):
     if not settings.get('photos_enabled', True):
         report['telegram_photos'] = dict(status='disabled', sent=0)
         return
     groups = [[photo] for group in photo_groups(report) for photo in group]
     planned = sum(map(len, groups))
     count = len(report['deals']) + len(report.get('advertised_offers', [])) + len(report.get('bestsellers', []))
-    if report.get('grouped'):
+    if report.get('showcase'):
+        pass
+    elif report.get('grouped'):
         plan, previous = [], None
         for group in groups:
             photo = group[0]
@@ -224,6 +251,8 @@ def publish_photos(report, token, channel, settings, *, opener, sleep):
         if confirmed:
             delivery['sent'] += 0 if p.get('section_header') else len(group)
             delivery['photos_sent'] += bool(p['media'])
+            if history is not None and p.get('item_key'):
+                mark_item(history,hashlib.sha256(channel.encode()).hexdigest(),p['item_key'],p['price_toman'],report['generated_at'])
         elif rejected and p['media']:
             # A rejected image does not remove the product's caption/link.
             groups[group_index+1:group_index+1] = [[dict(p, media=None)]]
@@ -239,6 +268,17 @@ def summary(report, config):
     now = dt.datetime.fromisoformat(report['generated_at']).astimezone(ZoneInfo(config.get('timezone', 'Asia/Tehran')))
     verified = len(report['deals'])
     advertised = len(report.get('advertised_offers', []))
+    if report.get('showcase'):
+        count=len(report['showcase_items']);best=len(report.get('bestsellers',[]))
+        if not count:
+            if report.get('errors'):
+                return f'🛍 <b>ویترین روزانه</b> · {now:%Y-%m-%d}\nدریافت داده کامل نشد؛ کالای جدید قابل ارائه پیدا نشد.'
+            return f'🛍 <b>ویترین روزانه</b> · {now:%Y-%m-%d}\nکالای جدید یا تغییر مهم قیمت برای معرفی پیدا نشد.\nبررسی بعدی: نوبت روزانهٔ بعد.'
+        counts={level:sum(r.get('price_comparison',{}).get('confidence','none')==level for r in report['showcase_items']) for level in ['high','partial','none']}
+        return (f'🛍 <b>ویترین روزانهٔ {count} انتخاب</b> · {now:%Y-%m-%d}\n'
+                f'💸 {count-best} تخفیف · 🏆 {best} پرفروش\n'
+                f'اطمینان ترب: 🟢 {counts["high"]} · 🟡 {counts["partial"]} · ⚪ {counts["none"]}\n'
+                'مقایسه محدود به منابع بررسی‌شده و بدون ارسال است؛ قیمت سبد را بررسی کنید.')
     text = f'🔎 <b>گزارش تخفیف‌های دیجی‌کالا</b>\n🕒 {now:%Y-%m-%d %H:%M}\nبررسی هر {report["interval_hours"]} ساعت · {report["candidate_count"]} کالای بررسی‌شده\n'
     text += f'📦 {verified + advertised} کالا · ✅ {verified} دارای شواهد بازار · ⚠️ {advertised} تخفیف اعلامی\n'
     if report.get('bestsellers_enabled') or report.get('bestsellers'):
@@ -317,7 +357,7 @@ def publish(report, history, config, *, opener=urllib.request.urlopen, sleep=tim
             print("Telegram delivery: sent and confirmed")
             # Keep confirmed text delivery even if a photo URL is inaccessible.
             # The successful invocation stays deduplicated after a restart.
-            publish_photos(report, token, channel, settings, opener=opener, sleep=sleep)
+            publish_photos(report, token, channel, settings, opener=opener, sleep=sleep, history=history)
             return []
         except urllib.error.HTTPError as error:
             # Telegram explicitly rejected a 429 request, so bounded retry is safe.

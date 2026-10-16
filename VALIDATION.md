@@ -41,3 +41,7 @@ The archive contains source, documentation, tests, and a labelled fabricated rep
 
 - Python tests: 76 passed, including live local stdio protocol validation against the built MCP (no network in unit tests).
 - Live Digikala Anker R50i A3949: market access succeeded, but comparable variant/condition evidence remained incomplete. It was marked partial and no comparable saving was invented.
+
+## 0.8.0
+
+81 unit tests passed. Added quota/variety/overlap tests, a 26-request summary-plus-25-photo test with four-line captions, per-channel price-memory checks at the 5% boundary, and no confirmed-history write after an item timeout.

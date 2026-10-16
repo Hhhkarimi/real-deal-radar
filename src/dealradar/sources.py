@@ -185,7 +185,7 @@ def collect_bestsellers(config, now):
     if not 1 <= limit <= 60 or not isinstance(codes, list) or len(codes) > 8 or any(not isinstance(c, str) for c in codes):
         raise ValueError("Bestseller limits: items 1..60, up to 8 categories")
     selected, errors, seen = [], [], set()
-    grouped = config.get('grouping', {}).get('enabled', False)
+    grouped = config.get('grouping', {}).get('enabled', False) or config.get('showcase',{}).get('enabled',False)
     def eligible(rows, scope, category_id=None):
         result = []
         for rank, p in enumerate(rows, 1):
