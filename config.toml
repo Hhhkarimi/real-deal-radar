@@ -12,6 +12,7 @@ database = "data/history.sqlite3"
 [grouping]
 enabled = true
 items_per_category = 5
+category_level = "type"
 
 [digikala]
 enabled = true
@@ -20,7 +21,9 @@ request_delay_seconds = 3
 
 [torob]
 enabled = true
-max_candidates = 40
+backend = "mcp"
+max_candidates = 60
+min_comparable_shops = 3
 search_results = 2
 shops_per_product = 4
 request_delay_seconds = 1

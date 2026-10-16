@@ -82,6 +82,37 @@ def digest(report, config):
     return heading + "".join(blocks) + note + footer
 
 
+def comparison_caption(row):
+    comparison=row.get('price_comparison')
+    if comparison is None: return ''
+    e=lambda value:html.escape(str(value),quote=True)
+    count=comparison.get('comparable_shop_count',0)
+    confidence=comparison.get('confidence','none')
+    badge={'high':'🟢 تطبیق قوی در دادهٔ ترب','partial':'🟡 مقایسهٔ ناقص','none':'⚪ قیمت بازار تأیید نشده'}[confidence]
+    text='\n'+badge
+    if count:
+        low,high=comparison['market_low_toman'],comparison['market_high_toman']
+        text+=f'\nترب: {fa_money(low)} تا {fa_money(high)} تومان · {count} فروشگاه همسان'
+        saving=comparison['saving_toman']; percent=abs(comparison['saving_percent'])
+        relation='کمتر' if saving>0 else 'بیشتر' if saving<0 else 'برابر'
+        text+=f'\nاختلاف با کمترین پیشنهاد همسان: {fa_money(abs(saving))} تومان ({percent:g}٪ {relation})؛ بدون ارسال'
+    elif confidence=='partial':
+        text+='\nمدل، نسخه، موجودی یا گارانتی برای مقایسهٔ همسان کافی نبود.'
+        if comparison.get('listed_low_toman'):
+            text+=f'\nقیمت‌های فهرست ترب: {fa_money(comparison["listed_low_toman"])} تا {fa_money(comparison["listed_high_toman"])} تومان؛ نسخهٔ همسان تأیید نشده'
+    if comparison.get('fetched_at'):
+        try:
+            checked=dt.datetime.fromisoformat(comparison['fetched_at'].replace('Z','+00:00')).astimezone(ZoneInfo('Asia/Tehran'))
+            text+=f'\nزمان بررسی ترب: {checked:%m-%d %H:%M}'
+        except (ValueError,TypeError): pass
+    if comparison.get('loaded_list_complete') is False or comparison.get('truncated'):
+        text+=' · پوشش محدود'
+    if comparison.get('torob_url'):
+        try: text+=f'\n<a href="{e(safe_url(comparison["torob_url"]))}">مقایسه در ترب</a>'
+        except ValueError: pass
+    return text
+
+
 def photo_groups(report):
     """Each photo keeps its own product link, price and confidence caption."""
     photos = []
@@ -94,7 +125,8 @@ def photo_groups(report):
     for index, (row, verified) in enumerate(entries, 1):
         c = row['candidate']
         e = lambda value: html.escape(str(value), quote=True)
-        title = c['title'][:240] + ('…' if len(c['title']) > 240 else '')
+        title_limit=140 if 'price_comparison' in row else 240
+        title = c['title'][:title_limit] + ('…' if len(c['title']) > title_limit else '')
         caption = f'{index}. <a href="{e(safe_url(c["url"]))}">{e(title)}</a>\n💰 {fa_money(c["price_toman"])} تومان'
         bestseller = row.get('list_kind') == 'bestseller'
         if report.get('grouped'):
@@ -104,7 +136,12 @@ def photo_groups(report):
             caption = f'🏆 پرفروش {index-discount_count}\n' + caption.split('. ', 1)[1]
         if c.get('discount_percent') is not None:
             caption += f' · تخفیف اعلامی {c["discount_percent"]:g}٪'
-        if bestseller:
+        if row.get('price_comparison') is not None:
+            caption+=comparison_caption(row)
+            reason=row.get('selection_reason','')[:140]
+            if reason: caption+='\nدلیل انتخاب: '+e(reason)
+            if bestseller: caption+='\nپرفروش بودن تضمین کمترین قیمت نیست.'
+        elif bestseller:
             caption += f'\nجایگاه {row["source_rank"]} در فهرست {e(row["ranking_scope"])}'
             caption += '\n⚠️ پرفروش بودن به معنی کمترین قیمت بازار نیست.'
         elif verified:
@@ -133,7 +170,7 @@ def publish_photos(report, token, channel, settings, *, opener, sleep):
             if key != previous:
                 section = '🏆 پرفروش‌ها' if key[0] == 'bestseller' else '💸 تخفیف‌ها'
                 category = html.escape(str(key[1]), quote=True)
-                criterion = 'جایگاه در فهرست پرفروش‌های دیجی‌کالا' if key[0] == 'bestseller' else 'درصد تخفیف اعلامی دیجی‌کالا'
+                criterion = 'جایگاه در فهرست پرفروش‌های دیجی‌کالا' if key[0] == 'bestseller' else ('صرفه‌جویی قابل مشاهده در پیشنهادهای همسان ترب؛ موارد بدون شاهد با برچسب جدا' if report.get('value_ranking') else 'درصد تخفیف اعلامی دیجی‌کالا')
                 heading = f'<b>{section} · {category}</b>\nتا {report["items_per_category"]} کالای برتر بر اساس {criterion}.'
                 plan.append([dict(media=None, caption=heading, section_header=True)])
                 previous = key
@@ -211,6 +248,10 @@ def summary(report, config):
         for key, label in [('discount_groups', 'تخفیف‌ها'), ('bestseller_groups', 'پرفروش‌ها')]:
             names = '، '.join(html.escape(str(g['category'])[:60]) for g in report[key][:12])
             text += f'{label}: {names or "دادهٔ کافی دریافت نشد"}\n'
+    if report.get('value_ranking'):
+        rows=report['deals']+report.get('advertised_offers',[])+report.get('bestsellers',[])
+        counts={level:sum(r.get('price_comparison',{}).get('confidence','none')==level for r in rows) for level in ['high','partial','none']}
+        text+=f'\nاطمینان مقایسهٔ ترب: 🟢 {counts["high"]} تطبیق قوی · 🟡 {counts["partial"]} ناقص · ⚪ {counts["none"]} بدون تأیید\n'
     if verified + advertised:
         text += '\nمشخصات و لینک خرید هر کالا در پیام تصویری جداگانهٔ بعدی می‌آید.\n'
     else:

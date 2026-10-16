@@ -83,6 +83,13 @@ def write_reports(report, destination, timezone):
                     else:
                         status = '⚠️ کمترین قیمت بازار تأیید نشده است.'
                     price = f'{fa_money(c["price_toman"])} تومان · تخفیف اعلامی {c["discount_percent"]:g}٪'
+                    comparison=row.get('price_comparison',{})
+                    if comparison:
+                        count=comparison.get('comparable_shop_count',0)
+                        status+=' · اطمینان ترب: '+comparison.get('confidence','none')
+                        if count:
+                            status+=f' · {count} فروشگاه همسان · کمترین پیشنهاد ترب: {fa_money(comparison["market_low_toman"])} تومان · اختلاف: {comparison["saving_percent"]}٪؛ بدون ارسال'
+                        status+=' · '+row.get('selection_reason','')
                     evidence = ''.join(f'<li><a href="{e(q["url"])}">{e(q["seller_id"])}</a> · {fa_money(q["price_toman"])} تومان</li>' for q in row.get('evidence', []))
                     cards.append(f'<article><h2>{row["category_position"]}. <a href="{e(c["url"])}">{e(c["title"])}</a></h2><p>{e(price)}</p><p>{e(status)}</p><ul>{evidence}</ul></article>')
                     markdown.extend([f'{row["category_position"]}. {c["title"]}',price,status,c['url'],''])

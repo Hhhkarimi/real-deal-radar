@@ -152,6 +152,8 @@ def dk_card(product, now):
                discount_percent=price.get("discount_percent", 0))
     row.update(color_name=color.get("title", ""), size_name=size.get("title", ""), brand_name=layer.get("brand", ""))
     row['category_group'] = taxonomy[0] or row['category']
+    brand = product.get('brand') or {}
+    row['brand_names'] = list(dict.fromkeys(s for s in [row['brand_name'], brand.get('title_fa'), brand.get('title_en')] if isinstance(s,str) and s.strip()))
     main_image = (product.get("images") or {}).get("main") or {}
     image_urls = main_image.get("url") or []
     if isinstance(image_urls, str):
@@ -274,7 +276,7 @@ def collect(config, now):
         if key not in unique or offer.observed_at > unique[key].observed_at:
             unique[key] = offer
     candidates = list(unique.values())
-    if config.get("torob", {}).get("enabled", False):
+    if config.get("torob", {}).get("enabled", False) and config.get('torob',{}).get('backend') != 'mcp':
         from .market import collect_market
         quotes, notices = collect_market(candidates, config, now)
         market.extend(quotes)

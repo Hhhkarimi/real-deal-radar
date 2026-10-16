@@ -55,6 +55,7 @@ class Offer:
     brand_name: str = ""
     image_url: str | None = None
     category_group: str = ""
+    brand_names: list[str] = dataclasses.field(default_factory=list)
 
     @classmethod
     def parse(cls, row: dict) -> "Offer":
@@ -73,6 +74,8 @@ class Offer:
         discount = row.get("discount_percent", 0)
         if isinstance(discount, bool) or not isinstance(discount, (int, float)) or not 0 <= discount <= 100:
             raise ValueError("discount_percent must be between 0 and 100")
+        if not isinstance(row.get('brand_names',[]),list) or any(not isinstance(v,str) for v in row.get('brand_names',[])):
+            raise ValueError('brand_names must contain strings')
         values = {f.name: row[f.name] for f in dataclasses.fields(cls) if f.name in row}
         values["url"] = safe_url(row["url"])
         if row.get("image_url"):

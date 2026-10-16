@@ -29,3 +29,15 @@ The archive contains source, documentation, tests, and a labelled fabricated rep
 - Removed the optional-payment exclusion; concrete direct merchant Offer, stock, model, variant and warranty validation remain mandatory.
 - Duplicate shop IDs no longer consume the independent-shop visit allowance.
 - Regression test verifies that two cash offers remain comparable when both shops also offer financing and the first shop appears twice. All 40 tests pass.
+
+
+## 0.7.0 — 2026-10-16
+
+- npm ci --ignore-scripts and TypeScript build: passed for the pinned Torob MCP.
+- Real stdio initialization: 10 tools; malformed product input rejected without an upstream request.
+- Live search, details and seller tool: succeeded after an initial timeout. Returned 3 search results and 50 seller offers, loaded_list_complete=true, truncated=true. This checks data access, not equal variants or market-wide minima.
+- Unit coverage includes stock unknown/false, ads, unreliable/boolean/zero prices, used items, mismatched warranty/color/model, stale/currency data, unique shops, true saving ranking, captions and source blocks.
+- Dockerfile updated but an image build is not verified in this environment (Docker CLI unavailable).
+
+- Python tests: 76 passed, including live local stdio protocol validation against the built MCP (no network in unit tests).
+- Live Digikala Anker R50i A3949: market access succeeded, but comparable variant/condition evidence remained incomplete. It was marked partial and no comparable saving was invented.

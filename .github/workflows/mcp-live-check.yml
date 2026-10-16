@@ -1,0 +1,33 @@
+name: Torob MCP live check
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mcp-live-check.yml'
+      - 'scripts/check_torob_mcp.py'
+permissions:
+  contents: read
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts --prefix vendor/torob-mcp
+      - run: npm run build --prefix vendor/torob-mcp
+      - run: pip install .
+      - name: Check live search, details and full seller tool
+        run: python scripts/check_torob_mcp.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: torob-mcp-live-check
+          path: output/mcp-live-check.json
+          retention-days: 7

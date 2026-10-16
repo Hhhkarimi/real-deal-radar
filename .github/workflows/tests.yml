@@ -12,4 +12,9 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: pip install .
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts --prefix vendor/torob-mcp
+      - run: npm run build --prefix vendor/torob-mcp
       - run: python -m unittest discover -s tests -v

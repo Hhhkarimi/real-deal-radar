@@ -11,6 +11,7 @@ from .report import write_reports
 from .sources import collect, dk_details, collect_bestsellers
 from .telegram import digest, publish
 from .grouping import select_groups, flatten
+from .pricing import enrich_prices, selection_reason
 
 LOG = logging.getLogger("dealradar")
 
@@ -73,22 +74,32 @@ def run_once(config, *, demo=False, send=True):
         advertised = advertised_shortlist(results, config, dt.datetime.now(UTC), config["max_items"] - len(deals))
         bestsellers, bestseller_errors = ([], []) if demo else collect_bestsellers(config, dt.datetime.now(UTC))
         errors.extend(bestseller_errors)
+        per_category = config.get('grouping',{}).get('items_per_category',5)
+        category_level = config.get('grouping',{}).get('category_level','group')
+        # Preserve official bestseller ordering before allocating price requests.
+        if config.get('torob',{}).get('backend')=='mcp' and not demo:
+            bestsellers=flatten(select_groups(bestsellers,per_category,bestsellers=True,category_level=category_level))
+            enrich_prices(results+bestsellers,config)
+            for row in results+bestsellers:
+                row['selection_reason']=selection_reason(row)
         grouped = config.get('grouping', {}).get('enabled', False)
         discount_groups, bestseller_groups = [], []
         if grouped:
             per_category = config['grouping'].get('items_per_category', 5)
             eligible = verified + advertised_shortlist(results, config, dt.datetime.now(UTC), len(results))
-            discount_groups = select_groups(eligible, per_category)
+            discount_groups = select_groups(eligible, per_category,category_level=category_level,
+                                            value_ranking=config.get('torob',{}).get('backend')=='mcp')
             chosen = flatten(discount_groups)
             deals = [r for r in chosen if r['status'] == 'verified']
             advertised = [r for r in chosen if r['status'] != 'verified']
-            bestseller_groups = select_groups(bestsellers, per_category, bestsellers=True)
+            bestseller_groups = select_groups(bestsellers, per_category, bestsellers=True,category_level=category_level)
             bestsellers = flatten(bestseller_groups)
         report = dict(generated_at=dt.datetime.now(UTC).isoformat(), interval_hours=config["interval_hours"],
                       max_items=config["max_items"], candidate_count=len(candidates), demo=demo,
                       deals=deals, audit=[r for r in results if r["status"] != "verified"],
                       advertised_offers=advertised,
                       bestsellers=bestsellers, bestsellers_enabled=config.get("bestsellers", {}).get("enabled", False),
+                      value_ranking=config.get('torob',{}).get('backend')=='mcp',
                       verified_not_shown=max(0, len(verified) - len(deals)), errors=errors)
         if grouped:
             report.update(grouped=True, items_per_category=per_category,
@@ -96,6 +107,8 @@ def run_once(config, *, demo=False, send=True):
                           max_items=per_category*len(discount_groups))
         if config.get("_market_coverage"):
             report["market_coverage"] = config["_market_coverage"]
+            if report['market_coverage'].get('provider_status')=='unavailable':
+                report['errors'].append('Torob MCP price source unavailable; inspect market coverage')
         if not demo and send:
             report["errors"].extend(publish(report, history, config))
         else:

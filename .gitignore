@@ -9,3 +9,5 @@ output/
 .env
 config.local.toml
 live-output/
+node_modules/
+mcp-preview/
