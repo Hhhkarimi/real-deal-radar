@@ -88,13 +88,19 @@ def photo_groups(report):
     entries = [(r, True) for r in report['deals']] + [(r, False) for r in report.get('advertised_offers', [])]
     discount_count = len(entries)
     entries += [(r, False) for r in report.get('bestsellers', [])]
+    if report.get('grouped'):
+        entries = [(r, r.get('status') == 'verified') for g in report['discount_groups'] for r in g['items']]
+        entries += [(r, False) for g in report['bestseller_groups'] for r in g['items']]
     for index, (row, verified) in enumerate(entries, 1):
         c = row['candidate']
         e = lambda value: html.escape(str(value), quote=True)
         title = c['title'][:240] + ('…' if len(c['title']) > 240 else '')
         caption = f'{index}. <a href="{e(safe_url(c["url"]))}">{e(title)}</a>\n💰 {fa_money(c["price_toman"])} تومان'
         bestseller = row.get('list_kind') == 'bestseller'
-        if bestseller:
+        if report.get('grouped'):
+            label = '🏆' if bestseller else '💸'
+            caption = f'{label} {e(row["report_category"])} · {row["category_position"]}\n' + caption.split('. ', 1)[1]
+        elif bestseller:
             caption = f'🏆 پرفروش {index-discount_count}\n' + caption.split('. ', 1)[1]
         if c.get('discount_percent') is not None:
             caption += f' · تخفیف اعلامی {c["discount_percent"]:g}٪'
@@ -107,7 +113,8 @@ def photo_groups(report):
                 caption += '؛ بدون هزینهٔ ارسال'
         else:
             caption += '\n⚠️ کمترین قیمت بازار تأیید نشده است.'
-        photos.append(dict(type='photo', media=safe_url(c['image_url']) if c.get('image_url') else None, caption=caption, parse_mode='HTML'))
+        photos.append(dict(type='photo', media=safe_url(c['image_url']) if c.get('image_url') else None, caption=caption, parse_mode='HTML',
+                           category=row.get('report_category'), list_kind='bestseller' if bestseller else 'discount'))
     return [photos[i:i+10] for i in range(0, len(photos), 10)]
 
 
@@ -118,7 +125,21 @@ def publish_photos(report, token, channel, settings, *, opener, sleep):
     groups = [[photo] for group in photo_groups(report) for photo in group]
     planned = sum(map(len, groups))
     count = len(report['deals']) + len(report.get('advertised_offers', [])) + len(report.get('bestsellers', []))
-    if report.get('bestsellers_enabled') or report.get('bestsellers'):
+    if report.get('grouped'):
+        plan, previous = [], None
+        for group in groups:
+            photo = group[0]
+            key = (photo['list_kind'], photo['category'])
+            if key != previous:
+                section = '🏆 پرفروش‌ها' if key[0] == 'bestseller' else '💸 تخفیف‌ها'
+                category = html.escape(str(key[1]), quote=True)
+                criterion = 'جایگاه در فهرست پرفروش‌های دیجی‌کالا' if key[0] == 'bestseller' else 'درصد تخفیف اعلامی دیجی‌کالا'
+                heading = f'<b>{section} · {category}</b>\nتا {report["items_per_category"]} کالای برتر بر اساس {criterion}.'
+                plan.append([dict(media=None, caption=heading, section_header=True)])
+                previous = key
+            plan.append(group)
+        groups = plan
+    elif report.get('bestsellers_enabled') or report.get('bestsellers'):
         n = len(report.get('bestsellers', []))
         heading = f'🏆 <b>گزارش کالاهای پرفروش</b>\n{n} کالای موجود و غیرسوپرمارکتی از فهرست پرفروش‌های سراسری و دسته‌های دیجی‌کالا.\nرتبهٔ هر کالا مربوط به فهرست ذکرشده در کپشن است؛ پرفروش بودن تضمین ارزان‌ترین بودن نیست.'
         groups.insert(len(report['deals']) + len(report.get('advertised_offers', [])), [dict(media=None, caption=heading, section_header=True)])
@@ -185,6 +206,11 @@ def summary(report, config):
     text += f'📦 {verified + advertised} کالا · ✅ {verified} دارای شواهد بازار · ⚠️ {advertised} تخفیف اعلامی\n'
     if report.get('bestsellers_enabled') or report.get('bestsellers'):
         text += f'🏆 بخش دوم: {len(report.get("bestsellers", []))} کالای پرفروش از فهرست سراسری و دسته‌های دیجی‌کالا\n'
+    if report.get('grouped'):
+        text += f'📂 در هر دسته تا {report["items_per_category"]} کالا\n'
+        for key, label in [('discount_groups', 'تخفیف‌ها'), ('bestseller_groups', 'پرفروش‌ها')]:
+            names = '، '.join(html.escape(str(g['category'])[:60]) for g in report[key][:12])
+            text += f'{label}: {names or "دادهٔ کافی دریافت نشد"}\n'
     if verified + advertised:
         text += '\nمشخصات و لینک خرید هر کالا در پیام تصویری جداگانهٔ بعدی می‌آید.\n'
     else:
