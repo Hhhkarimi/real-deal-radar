@@ -65,6 +65,27 @@ def write_reports(report, destination, timezone):
             rank = f'جایگاه {row["source_rank"]} در فهرست {row["ranking_scope"]}'
             cards.append(f'<article><h2><a href="{e(c["url"])}">{e(c["title"])}</a></h2><p>{fa_money(c["price_toman"])} تومان · تخفیف اعلامی {c["discount_percent"]:g}٪</p><p>{e(rank)}</p><p>پرفروش بودن تضمین کمترین قیمت نیست.</p></article>')
             markdown.extend([f'### {c["title"]}', f'قیمت: {fa_money(c["price_toman"])} تومان · تخفیف اعلامی: {c["discount_percent"]:g}٪', f'خرید: {c["url"]}', rank, ''])
+    if report.get('grouped'):
+        cards = []
+        markdown = markdown[:4]
+        for key, label in [('discount_groups', 'تخفیف‌ها'), ('bestseller_groups', 'پرفروش‌ها')]:
+            cards.append(f'<h2>{label}</h2>')
+            markdown.append(f'## {label}')
+            for group in report[key]:
+                cards.append(f'<h3>{e(group["category"])} · {len(group["items"])} کالا</h3>')
+                markdown.append(f'### {group["category"]}')
+                for row in group['items']:
+                    c = row['candidate']
+                    if key == 'bestseller_groups':
+                        status = f'جایگاه {row["source_rank"]} در فهرست {row["ranking_scope"]}؛ پرفروش بودن تضمین کمترین قیمت نیست.'
+                    elif row['status'] == 'verified':
+                        status = f'✅ {row["saving_percent"]}٪ زیر قیمت منابع بررسی‌شده'
+                    else:
+                        status = '⚠️ کمترین قیمت بازار تأیید نشده است.'
+                    price = f'{fa_money(c["price_toman"])} تومان · تخفیف اعلامی {c["discount_percent"]:g}٪'
+                    evidence = ''.join(f'<li><a href="{e(q["url"])}">{e(q["seller_id"])}</a> · {fa_money(q["price_toman"])} تومان</li>' for q in row.get('evidence', []))
+                    cards.append(f'<article><h2>{row["category_position"]}. <a href="{e(c["url"])}">{e(c["title"])}</a></h2><p>{e(price)}</p><p>{e(status)}</p><ul>{evidence}</ul></article>')
+                    markdown.extend([f'{row["category_position"]}. {c["title"]}',price,status,c['url'],''])
     audit = "".join(f"<tr><td>{e(r['candidate']['title'])}</td><td>{e('؛ '.join(REASONS.get(reason, reason) for reason in r['reasons']))}</td></tr>" for r in report["audit"])
     errors = "".join(f"<li>{e(error)}</li>" for error in report["errors"])
     coverage = ""
