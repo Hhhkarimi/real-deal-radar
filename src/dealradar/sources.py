@@ -151,6 +151,7 @@ def dk_card(product, now):
                supermarket=supermarket,
                discount_percent=price.get("discount_percent", 0))
     row.update(color_name=color.get("title", ""), size_name=size.get("title", ""), brand_name=layer.get("brand", ""))
+    row['category_group'] = taxonomy[0] or row['category']
     main_image = (product.get("images") or {}).get("main") or {}
     image_urls = main_image.get("url") or []
     if isinstance(image_urls, str):
@@ -182,6 +183,7 @@ def collect_bestsellers(config, now):
     if not 1 <= limit <= 60 or not isinstance(codes, list) or len(codes) > 8 or any(not isinstance(c, str) for c in codes):
         raise ValueError("Bestseller limits: items 1..60, up to 8 categories")
     selected, errors, seen = [], [], set()
+    grouped = config.get('grouping', {}).get('enabled', False)
     def eligible(rows, scope, category_id=None):
         result = []
         for rank, p in enumerate(rows, 1):
@@ -195,7 +197,7 @@ def collect_bestsellers(config, now):
         return result
     def append(row):
         key = row['candidate']['product_key']
-        if key not in seen and len(selected) < limit:
+        if key not in seen and (grouped or len(selected) < limit):
             selected.append(row); seen.add(key)
     try:
         data = json.loads(fetch("https://api.digikala.com/v1/best-selling/", attempts=1))["data"]
@@ -207,7 +209,7 @@ def collect_bestsellers(config, now):
         return [], ["Digikala bestsellers: " + str(error)]
     pools = []
     categories = {c.get("code"): c for c in data.get("categories", [])}
-    if len(selected) < limit:
+    if grouped or len(selected) < limit:
         for code in codes:
             category = categories.get(code)
             if not category:
@@ -225,7 +227,7 @@ def collect_bestsellers(config, now):
                     break
     # Category ranks remain scoped to their category, never presented as a
     # fabricated overall sales ranking. Rotate categories for a varied shortlist.
-    while any(pools) and len(selected) < limit:
+    while any(pools) and (grouped or len(selected) < limit):
         for pool in pools:
             if pool:
                 append(pool.pop(0))
