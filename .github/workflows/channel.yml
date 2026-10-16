@@ -2,8 +2,8 @@ name: Telegram channel report
 
 on:
   schedule:
-    # UTC: 00:17, 12:17 (Tehran: 03:47, 15:47)
-    - cron: '17 */12 * * *'
+    # Daily at 12:17 UTC (15:47 Asia/Tehran).
+    - cron: '17 12 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
