@@ -111,6 +111,8 @@ def load_config(path: pathlib.Path, override: float | None = None) -> dict:
     if isinstance(per_category, bool) or not isinstance(per_category, int) or not 1 <= per_category <= 20:
         raise ValueError('items_per_category must be an integer from 1 to 20')
     c["_base"] = path.resolve().parent
+    from .hunter import settings
+    settings(c)
     return c
 
 

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "real-deal-radar"
-version = "0.8.0"
-description = "Evidence-backed Persian deal reports with user-configurable scheduling"
+version = "0.9.0"
+description = "Stateful Persian deal hunter with exceptional alerts and verified 12-hour digests"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 readme = "README.md"

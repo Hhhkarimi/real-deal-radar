@@ -1,9 +1,9 @@
-name: Telegram channel report
+name: Deal hunting agent
 
 on:
   schedule:
-    # Daily at 12:17 UTC (15:47 Asia/Tehran).
-    - cron: '17 12 * * *'
+    # Poll every 15 minutes; exceptional deals do not wait for the 12h digest.
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -12,7 +12,7 @@ on:
         default: false
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: telegram-channel-report
@@ -29,8 +29,6 @@ jobs:
       MARKET_FEED_URL: ${{ secrets.MARKET_FEED_URL }}
       CANDIDATE_FEED_URL: ${{ secrets.CANDIDATE_FEED_URL }}
       RADAR_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
-      DEALRADAR_SCHEDULE_MODE: slots
-      DEALRADAR_MANUAL_RUN_ID: ${{ github.event_name == 'workflow_dispatch' && format('{0}-{1}', github.run_id, github.run_attempt) || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -50,12 +48,22 @@ jobs:
           key: channel-history-v1-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             channel-history-v1-
+      - name: Restore durable hunting memory
+        id: history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/history_store.py restore
       - name: Install package
         run: pip install .
-      - name: Collect prices and publish summary plus product posts
+      - name: Hunt verified deals and publish only new opportunities
         run: python scripts/actions_run.py
+      - name: Persist hunting memory even after a delivery failure
+        if: always() && steps.history.outcome == 'success' && env.RADAR_DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/history_store.py save
       - name: Save history even after a source or delivery failure
-        if: always()
+        if: always() && steps.history.outcome == 'success' && env.RADAR_DRY_RUN != 'true'
         uses: actions/cache/save@v4
         with:
           path: data/history.sqlite3

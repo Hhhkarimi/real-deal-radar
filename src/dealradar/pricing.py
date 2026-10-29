@@ -180,6 +180,8 @@ def enrich_prices(rows, config, *, client_factory=TorobMCP):
     while any(pools.values()):
         for pool in pools.values():
             if pool: selected.append(pool.pop(0))
+    if config.get('_hunt_order'):
+        selected=list(by_product)
     selected=selected[:int(settings.get('max_candidates',60))]
     deadline=time.monotonic()+min(600,float(settings.get('max_duration_seconds',480)))
     errors,checked=[],0

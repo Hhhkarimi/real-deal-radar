@@ -1,6 +1,6 @@
 # Fractional hours are supported. The running worker reloads this file.
-interval_hours = 24
-max_items = 20
+interval_hours = 0.25
+max_items = 5
 min_saving_percent = 15
 min_advertised_discount = 20
 min_market_sellers = 2
@@ -9,13 +9,30 @@ timezone = "Asia/Tehran"
 output_dir = "output"
 database = "data/history.sqlite3"
 
+[agent]
+enabled = true
+digest_hours = 12
+digest_items = 3
+flash_items = 2
+flash_daily_limit = 4
+max_per_category = 1
+repeat_days = 7
+repeat_price_drop_percent = 10
+repeat_min_hours = 6
+digest_saving_percent = 15
+digest_saving_toman = 100000
+flash_saving_percent = 25
+flash_saving_toman = 250000
+min_comparable_shops = 3
+max_market_age_minutes = 20
+
 [grouping]
 enabled = false
 items_per_category = 5
 category_level = "type"
 
 [showcase]
-enabled = true
+enabled = false
 max_items = 25
 discount_items = 15
 bestseller_items = 10
@@ -30,12 +47,12 @@ request_delay_seconds = 3
 [torob]
 enabled = true
 backend = "mcp"
-max_candidates = 60
+max_candidates = 24
 min_comparable_shops = 3
 search_results = 2
 shops_per_product = 4
 request_delay_seconds = 1
-max_duration_seconds = 480
+max_duration_seconds = 360
 
 [feeds]
 # File paths are relative to this config; HTTPS JSON feeds also work.
@@ -44,7 +61,7 @@ candidates = []
 market = []
 
 [bestsellers]
-enabled = true
+enabled = false
 max_items = 20
 category_codes = ["electronic-devices", "home-and-kitchen", "apparel", "home-appliance"]
 request_delay_seconds = 3

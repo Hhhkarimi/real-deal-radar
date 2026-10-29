@@ -92,12 +92,13 @@ class GroupingTests(unittest.TestCase):
         self.assertEqual(get.call_count,2)
         self.assertEqual(len(select_groups(result,5,bestsellers=True)),2)
 
-    def test_default_schedule_is_daily(self):
+    def test_default_schedule_polls_for_deals_every_fifteen_minutes(self):
         root=pathlib.Path(__file__).resolve().parents[1]
         config=load_config(root/'config.toml')
-        self.assertEqual(config['interval_hours'],24)
+        self.assertEqual(config['interval_hours'],0.25)
+        self.assertEqual(config['agent']['digest_hours'],12)
         self.assertEqual(config['grouping']['items_per_category'],5)
-        self.assertIn("cron: '17 12 * * *'", (root/'.github/workflows/channel.yml').read_text())
+        self.assertIn("cron: '7,22,37,52 * * * *'", (root/'.github/workflows/channel.yml').read_text())
 
 
 if __name__ == '__main__':
