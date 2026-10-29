@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('actions_run',Path(__file__).resolve().parents[1]/'scripts/actions_run.py')
 runner = importlib.util.module_from_spec(spec)
@@ -8,6 +9,15 @@ spec.loader.exec_module(runner)
 
 
 class ActionsTests(unittest.TestCase):
+    def test_agent_market_outage_fails_visibly_without_publishing_unverified_items(self):
+        report = dict(agent=True, deals=[], flash_deals=[], digest_deals=[], errors=['Torob unavailable'],
+                      candidate_count=1, market_coverage={'provider_status':'unavailable'})
+        with patch.dict('os.environ', {'RADAR_DRY_RUN':'true'}, clear=True), \
+             patch.object(runner, 'load_config', return_value={}), \
+             patch.object(runner, 'run_once', return_value=report), \
+             self.assertRaisesRegex(SystemExit, 'Market verification unavailable'):
+            runner.main()
+
     def test_manual_dispatch_has_its_own_delivery_identifier(self):
         c, dry = runner.configure({}, {'RADAR_DRY_RUN':'false', 'TELEGRAM_BOT_TOKEN':'test', 'TELEGRAM_CHAT_ID':'test', 'DEALRADAR_MANUAL_RUN_ID':'123-2'})
         self.assertFalse(dry)

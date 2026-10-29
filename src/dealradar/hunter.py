@@ -5,6 +5,7 @@ import hashlib
 import math
 import os
 from collections import Counter
+from urllib.parse import urlsplit
 
 from .core import Offer, UTC, evaluate, fresh, identity, safe_url, timestamp
 from .pricing import enrich_prices
@@ -167,6 +168,8 @@ def qualify(row, config, now):
             quotes = [Offer.parse(q) for q in row.get("evidence", [])]
         except (KeyError, TypeError, ValueError):
             return None, "invalid_market_evidence"
+    own_host = urlsplit(candidate.url).hostname.removeprefix("www.")
+    quotes = [q for q in quotes if urlsplit(q.url).hostname.removeprefix("www.") != own_host]
     policy = dict(config, min_advertised_discount=0, min_saving_percent=cfg["digest_saving_percent"],
                   min_market_sellers=cfg["min_comparable_shops"],
                   max_evidence_age_hours=cfg["max_market_age_minutes"] / 60)

@@ -78,6 +78,11 @@ class HunterTests(unittest.TestCase):
             with self.subTest(changes=changes):
                 self.assertIsNone(deal(**changes))
 
+    def test_digikala_domain_alias_cannot_count_as_an_independent_market_seller(self):
+        r = row()
+        r["evidence"][0]["url"] = "https://digikala.com/product/dkp-1/"
+        self.assertIsNone(qualify(r, CONFIG, NOW)[0])
+
     def test_percentage_and_absolute_saving_both_matter(self):
         self.assertEqual(deal(price_toman=800000)["hunt_tier"], "digest")
         r = row(price_toman=700)
