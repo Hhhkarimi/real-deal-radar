@@ -20,6 +20,9 @@ LOG = logging.getLogger("dealradar")
 
 
 def run_once(config, *, demo=False, send=True):
+    if config.get("agent", {}).get("enabled", False):
+        from .hunter import run_once as hunt_once
+        return hunt_once(config, demo=demo, send=send)
     now = dt.datetime.now(UTC)
     candidates, market, errors = collect(config, now)
     # Fabricated fixtures must remain labelled and must never be published,

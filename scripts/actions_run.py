@@ -40,6 +40,8 @@ def main():
     print(f"Generated report: {len(row['deals'])} verified deals; {len(row['errors'])} errors; preview={dry}")
     print(f"Advertised offers without market verification: {len(row.get('advertised_offers', []))}")
     print(f"Bestselling products: {len(row.get('bestsellers', []))}")
+    if row.get('agent'):
+        print(f"Hunter: {len(row['flash_deals'])} exceptional; {len(row['digest_deals'])} digest selections")
     print("Telegram delivery: " + json.dumps(row.get("telegram_delivery", {"status": "preview" if dry else "unknown"})))
     print("Market coverage: " + json.dumps(row.get("market_coverage", {}), ensure_ascii=False))
     source_failures = Counter()
@@ -52,6 +54,8 @@ def main():
     # history are saved by the always() workflow steps regardless of this exit.
     if any(error.startswith("Telegram") for error in row["errors"]):
         raise SystemExit("Telegram delivery failed; inspect report status")
+    if row.get('agent') and row.get('market_coverage', {}).get('provider_status') == 'unavailable' and not row['deals']:
+        raise SystemExit("Market verification unavailable; no unverified fallback published")
     if row["errors"] and not row["candidate_count"] and not row.get("bestsellers"):
         raise SystemExit("Data collection failed; inspect report status")
 

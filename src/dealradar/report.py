@@ -27,9 +27,15 @@ def write_reports(report, destination, timezone):
     rows = report["deals"]
     advertised = report.get("advertised_offers", [])
     heading = "گزارش کالاهای دیجی‌کالا" if report.get("bestsellers_enabled") else ("گزارش تخفیف‌های دیجی‌کالا" if advertised else "گزارش تخفیف واقعی")
+    if report.get("agent"):
+        heading = "شکار فرصت‌های خرید واقعی"
     cards = []
     markdown = ["# " + heading + (" — دادهٔ نمایشی" if report["demo"] else ""),
                 f"زمان بررسی: {when} ({timezone})", f"فاصلهٔ بررسی: {report['interval_hours']} ساعت", ""]
+    if report.get("agent"):
+        note = f"شکار ویژه: {len(report['flash_deals'])} کالا · گلچین ۱۲ساعته: {len(report['digest_deals'])} کالا؛ بدون پیشنهاد تأییدنشده."
+        markdown.extend([note, ""])
+        cards.append("<p>" + e(note) + "</p>")
     for row in rows:
         c = row["candidate"]
         basis = "قیمت با ارسال" if row["comparison_basis"] == "delivered" else "قیمت کالا؛ هزینهٔ ارسال نامشخص و محاسبه نشده"
