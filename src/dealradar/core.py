@@ -113,6 +113,8 @@ def load_config(path: pathlib.Path, override: float | None = None) -> dict:
     c["_base"] = path.resolve().parent
     from .hunter import settings
     settings(c)
+    from .schedule import monitoring_allowed
+    monitoring_allowed(c)
     return c
 
 
