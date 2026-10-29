@@ -15,11 +15,18 @@ from .telegram import digest, publish
 from .grouping import select_groups, flatten
 from .pricing import enrich_prices, selection_reason
 from .showcase import select_showcase, item_due
+from .schedule import monitoring_allowed
 
 LOG = logging.getLogger("dealradar")
 
 
 def run_once(config, *, demo=False, send=True):
+    if not monitoring_allowed(config):
+        LOG.info("Monitoring paused outside configured local hours")
+        return dict(generated_at=dt.datetime.now(UTC).isoformat(), interval_hours=config["interval_hours"],
+                    candidate_count=0, demo=demo, agent=config.get("agent", {}).get("enabled", False),
+                    deals=[], flash_deals=[], digest_deals=[], advertised_offers=[], bestsellers=[], errors=[],
+                    telegram_delivery={"status": "skipped", "reason": "outside_monitoring_hours"})
     if config.get("agent", {}).get("enabled", False):
         from .hunter import run_once as hunt_once
         return hunt_once(config, demo=demo, send=send)
@@ -153,7 +160,7 @@ def worker(path, override=None, stop=None, clock=time.monotonic, runner=run_once
         try:
             config = load_config(path, override)
             now = clock()
-            if last_start is None or now - last_start >= config["interval_hours"] * 3600:
+            if monitoring_allowed(config) and (last_start is None or now - last_start >= config["interval_hours"] * 3600):
                 last_start = now
                 runner(config)
         except Exception as error:

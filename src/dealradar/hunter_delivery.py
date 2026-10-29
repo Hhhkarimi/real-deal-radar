@@ -9,6 +9,7 @@ import urllib.request
 
 from .core import UTC, safe_url
 from .report import fa_money
+from .schedule import monitoring_allowed
 
 
 def message(rows, kind):
@@ -35,6 +36,9 @@ def message(rows, kind):
 
 def publish(report, memory, config, *, opener=urllib.request.urlopen, sleep=time.sleep):
     delivery = report["telegram_delivery"] = dict(status="skipped", reason="no_new_deals", sent=0)
+    if not monitoring_allowed(config):
+        delivery["reason"] = "outside_monitoring_hours"
+        return []
     batches = [("flash", [row]) for row in report["flash_deals"]]
     if report["digest_deals"]:
         batches.append(("digest", report["digest_deals"]))

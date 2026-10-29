@@ -98,7 +98,9 @@ class GroupingTests(unittest.TestCase):
         self.assertEqual(config['interval_hours'],0.25)
         self.assertEqual(config['agent']['digest_hours'],12)
         self.assertEqual(config['grouping']['items_per_category'],5)
-        self.assertIn("cron: '7,22,37,52 * * * *'", (root/'.github/workflows/channel.yml').read_text())
+        self.assertEqual(config['monitoring_start_hour'],8)
+        self.assertEqual(config['monitoring_end_hour'],22)
+        self.assertIn("cron: '*/15 5-17 * * *'", (root/'.github/workflows/channel.yml').read_text())
 
 
 if __name__ == '__main__':

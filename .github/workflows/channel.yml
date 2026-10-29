@@ -2,8 +2,10 @@ name: Deal hunting agent
 
 on:
   schedule:
-    # Poll every 15 minutes; exceptional deals do not wait for the 12h digest.
-    - cron: '7,22,37,52 * * * *'
+    # Asia/Tehran is UTC+03:30: poll 08:00..21:45 local, never 22:00..07:59.
+    - cron: '30,45 4 * * *'
+    - cron: '*/15 5-17 * * *'
+    - cron: '0,15 18 * * *'
   workflow_dispatch:
     inputs:
       dry_run:

@@ -6,6 +6,8 @@ min_advertised_discount = 20
 min_market_sellers = 2
 max_evidence_age_hours = 6
 timezone = "Asia/Tehran"
+monitoring_start_hour = 8
+monitoring_end_hour = 22
 output_dir = "output"
 database = "data/history.sqlite3"
 
