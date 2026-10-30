@@ -57,6 +57,9 @@ jobs:
         run: python scripts/history_store.py restore
       - name: Install package
         run: pip install .
+      - name: Verify Telegram permission without posting
+        if: env.RADAR_DRY_RUN != 'true'
+        run: python -m dealradar.health
       - name: Hunt verified deals and publish only new opportunities
         run: python scripts/actions_run.py
       - name: Persist hunting memory even after a delivery failure

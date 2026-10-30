@@ -1,0 +1,26 @@
+name: Telegram read-only health
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install .
+      - name: Verify token and channel permission without posting
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -m dealradar.health
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: telegram-health-${{ github.run_id }}
+          path: output/telegram-health.json
+          retention-days: 7

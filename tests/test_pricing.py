@@ -7,7 +7,8 @@ import unittest
 
 from dealradar.core import UTC
 from dealradar.grouping import select_groups, flatten
-from dealradar.pricing import compare_listings, combine_comparisons, model_match, enrich_prices, selection_reason
+from dealradar.pricing import compare_listings, combine_comparisons, model_match, enrich_prices, selection_reason, resolve_merchant_url
+from unittest.mock import patch
 from dealradar.telegram import photo_groups, visible_length
 from dealradar.torob_mcp import TorobMCP, MCPError
 from test_engine import offer, C
@@ -34,6 +35,28 @@ def market(count=3):
 
 
 class PricingTests(unittest.TestCase):
+    def test_torob_html_handoff_resolves_without_fetching_the_merchant(self):
+        redirect='https://api.torob.com/v4/product-page/redirect/?prk=test'
+        with patch('dealradar.sources.fetch_page', return_value=('<a href="https://shop.example/p">خرید</a>',redirect)) as fetch:
+            self.assertEqual(resolve_merchant_url(redirect),'https://shop.example/p')
+        fetch.assert_called_once_with(redirect,attempts=1)
+
+    def test_ambiguous_redirect_is_not_treated_as_a_verified_shop(self):
+        redirect='https://api.torob.com/v4/product-page/redirect/?prk=test'
+        with patch('dealradar.sources.fetch_page', return_value=('<a href="https://a.example/p">a</a><a href="https://b.example/p">b</a>',redirect)):
+            with self.assertRaises(ValueError):resolve_merchant_url(redirect)
+
+    def test_typographic_hyphen_in_model_does_not_reject_the_same_compact_code(self):
+        c=dataclasses.replace(candidate(), title='پاوربانک ریمکس مدل RPP\u2011770', brand_name='ریمکس', brand_names=[])
+        self.assertTrue(model_match(c,'پاوربانک ریمکس مدل RPP770'))
+        self.assertTrue(model_match(c,'پاوربانک ریمکس مدل RPP-770'))
+        self.assertFalse(model_match(c,'پاوربانک ریمکس مدل RPP771'))
+
+    def test_parent_color_catalog_cannot_override_explicit_seller_variant(self):
+        detail,sellers=market()
+        detail['specifications']['items']=[dict(name='رنگ',value='مشکی، سفید')]
+        self.assertEqual(compare_listings(candidate(),detail,sellers,NOW)['comparable_shop_count'],3)
+
     def test_multiple_parent_listings_do_not_double_count_shops(self):
         first=compare_listings(candidate(),*market(),NOW)
         result=combine_comparisons(candidate(),[first,first])
