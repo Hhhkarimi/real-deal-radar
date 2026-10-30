@@ -3,14 +3,22 @@ import datetime as dt
 import math
 import re
 import time
+import unicodedata
 from collections import Counter
+from urllib.parse import urlsplit
 
-from .core import UTC, Offer, fresh, timestamp
+from .core import UTC, Offer, fresh, timestamp, safe_url
 from .market import normalized, color_identity, warranty_identity
 from .torob_mcp import TorobMCP, MCPError
 
 
+def model_text(value):
+    value = unicodedata.normalize('NFKC', value).translate(str.maketrans('۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩', '01234567890123456789'))
+    return ''.join('-' if unicodedata.category(ch) == 'Pd' else ch for ch in value)
+
+
 def model_terms(title):
+    title = model_text(title)
     part = re.split(r'مدل\s+', title, maxsplit=1)
     if len(part) < 2: return []
     latin = re.split(r'[\u0600-\u06ff]', part[1], maxsplit=1)[0]
@@ -30,7 +38,7 @@ def model_match(candidate, title):
     if normalized(candidate.title) == normalized(title): return True
     terms = model_terms(candidate.title)
     if not terms: return False
-    words = {re.sub('[^a-z0-9]', '', t.lower()) for t in re.findall(r'[A-Za-z0-9][A-Za-z0-9.-]*', title)}
+    words = {re.sub('[^a-z0-9]', '', t.lower()) for t in re.findall(r'[A-Za-z0-9][A-Za-z0-9.-]*', model_text(title))}
     if not set(terms) <= words: return False
     brands=[normalized(b) for b in [candidate.brand_name]+candidate.brand_names if normalized(b) not in ('','متفرقه','unknown')]
     if not brands or not any(' '+brand+' ' in ' '+normalized(title)+' ' for brand in brands): return False
@@ -67,7 +75,6 @@ def compare_listings(candidate, detail, sellers, now, minimum=3):
         # English metadata may repeat a Persian exact title: evaluate separately.
         if not model_match(candidate,detail.get('title') or ''):
             result['reason']='model_mismatch'; return result
-    attrs = {normalized(s.get('name','')):s.get('value','') for s in detail.get('specifications',{}).get('items',[])}
     matched, observed, listed, failures = [], set(), [], Counter()
     offers=sorted(sellers.get('items',[]),key=lambda o:o.get('price_toman') if positive(o.get('price_toman')) else float('inf'))
     seen_ids, seen_names = set(), set()
@@ -84,7 +91,9 @@ def compare_listings(candidate, detail, sellers, now, minimum=3):
         listed.append(offer['price_toman'])
         if not model_match(candidate,description): failures['seller_model_unconfirmed']+=1; continue
         # The seller must declare the selected variant, not just the parent SKU.
-        color=normalized(description+' '+str(attrs.get(normalized('رنگ'),'')))
+        # Parent specifications can list every catalog color; only the seller's
+        # own offer identifies the concrete variant available at this price.
+        color=normalized(description)
         expected_color=color_identity(candidate.color_name)
         color_aliases={'مشکی':['مشکی','سیاه','black'],'سفید':['سفید','white'],'آبی':['آبی','blue'],
                        'قرمز':['قرمز','red'],'سبز':['سبز','green'],'نقره ای':['نقره ای','silver'],
@@ -156,6 +165,64 @@ def combine_comparisons(candidate, comparisons, minimum=3, limited=False):
         result['torob_url']=min((c for c in comparisons if c.get('evidence')),key=lambda c:min(o['price_toman'] for o in c['evidence']))['torob_url']
     elif observed:result.update(confidence='partial',reason='variant_or_condition_unconfirmed')
     return result
+
+
+def resolve_merchant_url(url):
+    """Resolve Torob's HTML handoff without executing scripts or visiting the shop."""
+    from .market import ShopRedirect
+    from .sources import fetch_page
+    parsed = urlsplit(safe_url(url))
+    if parsed.hostname != 'api.torob.com' or parsed.path != '/v4/product-page/redirect/':
+        raise ValueError('Unexpected merchant redirect')
+    html, destination = fetch_page(url, attempts=1)
+    own_hosts = {'torob.com', 'api.torob.com', 'www.torob.com'}
+    if urlsplit(safe_url(destination)).hostname not in own_hosts:
+        return destination
+    parser = ShopRedirect()
+    parser.feed(html)
+    links = {u for u in parser.links if urlsplit(u).hostname not in own_hosts}
+    if len(links) != 1:
+        raise ValueError('Unambiguous merchant destination required')
+    return links.pop()
+
+
+def resolve_comparison_urls(rows, minimum=3, *, saving_percent=0, saving_toman=0, max_seconds=90):
+    """Retain the cheapest matched quotes, with actual independent shop domains."""
+    deadline, cache = time.monotonic() + max_seconds, {}
+    for row in rows:
+        comparison = row.get('price_comparison', {})
+        if (comparison.get('confidence') != 'high' or comparison.get('saving_percent', 0) < saving_percent
+                or comparison.get('saving_toman', 0) < saving_toman):
+            continue
+        resolved, domains, ids = [], set(), set()
+        try:
+            for quote in sorted(comparison.get('evidence', []), key=lambda q:q['price_toman']):
+                if time.monotonic() >= deadline:
+                    raise ValueError('Merchant lookup budget exhausted')
+                url = safe_url(quote['url'])
+                host = urlsplit(url).hostname
+                if host in {'api.torob.com', 'torob.com', 'www.torob.com'}:
+                    if url not in cache:
+                        cache[url] = resolve_merchant_url(url)
+                    url = safe_url(cache[url])
+                    host = urlsplit(url).hostname
+                if host in {'api.torob.com', 'torob.com', 'www.torob.com'}:
+                    raise ValueError('Unresolved merchant link')
+                domain = host.removeprefix('www.')
+                if domain == urlsplit(row['candidate']['url']).hostname.removeprefix('www.'):
+                    continue
+                if domain in domains or quote.get('shop_id') in ids:
+                    continue
+                resolved.append(dict(quote, url=url))
+                domains.add(domain)
+                ids.add(quote.get('shop_id'))
+                if len(resolved) >= minimum:
+                    break
+            if len(resolved) < minimum:
+                raise ValueError('Insufficient independent merchants')
+            comparison.update(evidence=resolved, comparable_shop_count=len(resolved))
+        except (ValueError, KeyError, TypeError, RuntimeError):
+            comparison.update(confidence='partial', reason='merchant_destinations_unconfirmed')
 
 
 def enrich_prices(rows, config, *, client_factory=TorobMCP):

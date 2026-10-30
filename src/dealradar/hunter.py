@@ -8,7 +8,7 @@ from collections import Counter
 from urllib.parse import urlsplit
 
 from .core import Offer, UTC, evaluate, fresh, identity, safe_url, timestamp
-from .pricing import enrich_prices
+from .pricing import enrich_prices, resolve_comparison_urls
 from .report import write_reports
 from .sources import collect, dk_details, json_feed
 
@@ -267,6 +267,8 @@ def run_once(config, *, demo=False, send=True):
             enrich_prices([r for r in rows if r["status"] != "verified"], enrichment)
             if enrichment.get("_market_coverage"):
                 config["_market_coverage"] = enrichment["_market_coverage"]
+        resolve_comparison_urls(rows, cfg['min_comparable_shops'],
+                                saving_percent=cfg['digest_saving_percent'], saving_toman=cfg['digest_saving_toman'])
         accepted, audit = [], []
         for row in rows:
             deal, reason = qualify(row, config, dt.datetime.now(UTC))
@@ -302,6 +304,11 @@ def run_once(config, *, demo=False, send=True):
                       deals=planned["flash"] + planned["digest"], audit=audit,
                       advertised_offers=[], bestsellers=[], bestsellers_enabled=False,
                       verified_not_shown=len(accepted) - len(checked), errors=errors)
+        report['verification_summary'] = dict(
+            eligible_candidates=sum(not c.supermarket and c.in_stock and c.price_toman > 0 for c in candidates),
+            comparable_products=sum(r.get('price_comparison', {}).get('comparable_shop_count', 0) > 0 for r in rows),
+            rejection_counts=dict(Counter(r['hunt_rejection'] for r in audit)),
+            comparison_reasons=dict(Counter(r.get('price_comparison', {}).get('reason', 'direct_feed') for r in rows)))
         if config.get("_market_coverage"):
             report["market_coverage"] = config["_market_coverage"]
             if report["market_coverage"].get("provider_status") == "unavailable":

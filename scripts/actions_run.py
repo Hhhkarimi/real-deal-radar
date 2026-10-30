@@ -44,6 +44,7 @@ def main():
         print(f"Hunter: {len(row['flash_deals'])} exceptional; {len(row['digest_deals'])} digest selections")
     print("Telegram delivery: " + json.dumps(row.get("telegram_delivery", {"status": "preview" if dry else "unknown"})))
     print("Market coverage: " + json.dumps(row.get("market_coverage", {}), ensure_ascii=False))
+    print("Verification summary: " + json.dumps(row.get("verification_summary", {}), ensure_ascii=False))
     source_failures = Counter()
     for error in row["errors"]:
         provider = next((p for p in ["Digikala", "Torob", "Telegram"] if error.startswith(p)), "other")

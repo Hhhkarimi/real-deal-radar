@@ -208,6 +208,26 @@ class HunterTests(unittest.TestCase):
             self.assertFalse(history.db.execute("SELECT 1 FROM hunt_deliveries").fetchone())
             history.close()
 
+    def test_torob_redirect_links_are_resolved_before_counting_independent_domains(self):
+        now = dt.datetime.now(UTC)
+        c = offer(observed_at=now.isoformat())
+        def enrich(rows, config):
+            for r in rows:
+                r['price_comparison'] = dict(confidence='high', reason='comparable_listings',
+                    fetched_at=now.isoformat(), comparable_shop_count=3, saving_percent=30, saving_toman=300000,
+                    evidence=[dict(shop_id=i, price_toman=1000000,
+                        url=f'https://api.torob.com/v4/product-page/redirect/?prk={i}') for i in range(3)])
+        with tempfile.TemporaryDirectory() as directory:
+            config = dict(CONFIG, _base=pathlib.Path(directory))
+            with patch('dealradar.hunter.collect', return_value=([c], [], [])), \
+                 patch('dealradar.hunter.enrich_prices', side_effect=enrich), \
+                 patch('dealradar.pricing.resolve_merchant_url', create=True,
+                       side_effect=[f'https://shop{i}.example/p' for i in range(3)]) as resolve, \
+                 patch('dealradar.hunter.recheck', side_effect=lambda r,*_:r):
+                report = run_once(config, send=False)
+            self.assertEqual(len(report['flash_deals']), 1)
+            self.assertEqual(resolve.call_count, 3)
+
     def test_price_increase_downgrades_a_flash_and_updates_its_comparison(self):
         r = row()
         r["candidate"]["price_toman"] = 800000
