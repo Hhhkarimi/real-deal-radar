@@ -34,6 +34,9 @@ def select_showcase(discounts,bestsellers,settings,*,due=lambda c:True):
     def discount_rank(row):
         p=row.get('price_comparison',{})
         tier=0 if p.get('confidence')=='high' and p.get('comparable_shop_count',0) else 1 if p.get('comparable_shop_count',0) else 2
+        if p.get('source')=='emalls' and p.get('reference_only'):
+            value=p.get('reference_saving_percent',0)
+            return (1 if value>0 else 3,-value,0,-row['candidate'].get('discount_percent',0))
         return (tier,-p.get('saving_percent',0),-p.get('saving_toman',0),-row['candidate'].get('discount_percent',0))
     pools=[sorted(discounts,key=discount_rank),sorted(bestsellers,key=lambda r:(0 if r.get('source_category_id') is None else 1,r['source_rank']))]
     selected,seen,types=[],set(),Counter()
@@ -44,7 +47,7 @@ def select_showcase(discounts,bestsellers,settings,*,due=lambda c:True):
             c=row['candidate'];kind=category_name(row,'type')
             if c['product_key'] in seen or types[kind]>=per_type or c.get('supermarket') or not c.get('in_stock',True):continue
             comparison=row.get('price_comparison',{})
-            if section==0 and comparison.get('comparable_shop_count',0) and comparison.get('saving_percent',0)<=0:continue
+            if section==0 and not settings.get('always_recommend',False) and comparison.get('comparable_shop_count',0) and comparison.get('saving_percent',0)<=0:continue
             if not due(c):continue
             selected.append(dict(row,showcase_section='discount' if section==0 else 'bestseller'))
             seen.add(c['product_key']);types[kind]+=1;count+=1

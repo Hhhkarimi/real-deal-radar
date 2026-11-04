@@ -13,6 +13,7 @@ database = "data/history.sqlite3"
 
 [agent]
 enabled = true
+market_source = "emalls"
 digest_hours = 12
 digest_items = 3
 flash_items = 2
@@ -34,12 +35,19 @@ items_per_category = 5
 category_level = "type"
 
 [showcase]
-enabled = false
+enabled = true
 max_items = 25
-discount_items = 15
-bestseller_items = 10
+discount_items = 25
+bestseller_items = 0
 max_per_type = 2
 price_change_percent = 5
+always_recommend = true
+
+[emalls]
+enabled = true
+max_candidates = 5
+max_duration_seconds = 60
+request_delay_seconds = 1
 
 [digikala]
 enabled = true
@@ -47,8 +55,8 @@ pages = 6
 request_delay_seconds = 3
 
 [torob]
-enabled = true
-backend = "mcp"
+enabled = false
+backend = "disabled"
 max_candidates = 24
 min_comparable_shops = 3
 search_results = 2

@@ -121,14 +121,18 @@ def compact_photo(row):
     lines=[f'{icon} <b>{e(title)}</b>',f'💰 {fa_money(c["price_toman"])} تومان · تخفیف اعلامی {c.get("discount_percent",0):g}٪']
     p=row.get('price_comparison',{});count=p.get('comparable_shop_count',0)
     confidence=p.get('confidence','none')
+    source='ایمالز' if p.get('source')=='emalls' else 'ترب'
     if count:
         saving=p['saving_percent'];relation='کمتر' if saving>0 else 'بیشتر' if saving<0 else 'برابر'
-        lines.append(f'📊 تربِ همسان: {fa_money(p["market_low_toman"])} تومان · {abs(saving):g}٪ {relation}')
+        lines.append(f'📊 {source} همسان: {fa_money(p["market_low_toman"])} تومان · {abs(saving):g}٪ {relation}')
+    elif source=='ایمالز' and p.get('listed_low_toman'):
+        lines.append(f'📊 ایمالز از {fa_money(p["listed_low_toman"])} تومان؛ نسخه/گارانتی تأیید نشده')
     else:lines.append('🟡 قیمت همسان تأیید نشد' if confidence=='partial' else '⚪ قیمت بازار دریافت نشد')
-    badge={'high':'🟢 تطبیق ترب','partial':'🟡 ناقص','none':'⚪ بدون تأیید'}.get(confidence,'⚪ بدون تأیید')
+    badge={'high':f'🟢 تطبیق {source}','partial':'🟡 ناقص','none':'⚪ بدون تأیید'}.get(confidence,'⚪ بدون تأیید')
     links=f'<a href="{e(safe_url(c["url"]))}">خرید</a>'
-    if p.get('torob_url'):
-        try:links+=f' | <a href="{e(safe_url(p["torob_url"]))}">ترب</a>'
+    source_url=p.get('emalls_url') or p.get('torob_url')
+    if source_url:
+        try:links+=f' | <a href="{e(safe_url(source_url))}">{source}</a>'
         except ValueError:pass
     lines.append(badge+' · '+links)
     return dict(type='photo',media=safe_url(c['image_url']) if c.get('image_url') else None,
@@ -275,9 +279,10 @@ def summary(report, config):
                 return f'🛍 <b>ویترین روزانه</b> · {now:%Y-%m-%d}\nدریافت داده کامل نشد؛ کالای جدید قابل ارائه پیدا نشد.'
             return f'🛍 <b>ویترین روزانه</b> · {now:%Y-%m-%d}\nکالای جدید یا تغییر مهم قیمت برای معرفی پیدا نشد.\nبررسی بعدی: نوبت روزانهٔ بعد.'
         counts={level:sum(r.get('price_comparison',{}).get('confidence','none')==level for r in report['showcase_items']) for level in ['high','partial','none']}
+        source='ایمالز' if report.get('market_source')=='emalls' else 'ترب'
         return (f'🛍 <b>ویترین روزانهٔ {count} انتخاب</b> · {now:%Y-%m-%d}\n'
                 f'💸 {count-best} تخفیف · 🏆 {best} پرفروش\n'
-                f'اطمینان ترب: 🟢 {counts["high"]} · 🟡 {counts["partial"]} · ⚪ {counts["none"]}\n'
+                f'اطمینان {source}: 🟢 {counts["high"]} · 🟡 {counts["partial"]} · ⚪ {counts["none"]}\n'
                 'مقایسه محدود به منابع بررسی‌شده و بدون ارسال است؛ قیمت سبد را بررسی کنید.')
     text = f'🔎 <b>گزارش تخفیف‌های دیجی‌کالا</b>\n🕒 {now:%Y-%m-%d %H:%M}\nبررسی هر {report["interval_hours"]} ساعت · {report["candidate_count"]} کالای بررسی‌شده\n'
     text += f'📦 {verified + advertised} کالا · ✅ {verified} دارای شواهد بازار · ⚠️ {advertised} تخفیف اعلامی\n'

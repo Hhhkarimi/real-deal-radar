@@ -47,7 +47,7 @@ def main():
     print("Verification summary: " + json.dumps(row.get("verification_summary", {}), ensure_ascii=False))
     source_failures = Counter()
     for error in row["errors"]:
-        provider = next((p for p in ["Digikala", "Torob", "Telegram"] if error.startswith(p)), "other")
+        provider = next((p for p in ["Digikala", "Emalls", "Torob", "Telegram"] if error.startswith(p)), "other")
         status = re.search(r"HTTP (\d{3})", error)
         source_failures[provider + ("_http_" + status[1] if status else "_failed")] += 1
     print("Source failure counts: " + json.dumps(dict(source_failures)))

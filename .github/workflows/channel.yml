@@ -31,18 +31,12 @@ jobs:
       MARKET_FEED_URL: ${{ secrets.MARKET_FEED_URL }}
       CANDIDATE_FEED_URL: ${{ secrets.CANDIDATE_FEED_URL }}
       RADAR_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || 'false' }}
+      DEALRADAR_MANUAL_RUN_ID: ${{ github.event_name == 'workflow_dispatch' && format('{0}-{1}', github.run_id, github.run_attempt) || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-      - name: Build pinned Torob MCP
-        run: |
-          npm ci --ignore-scripts --prefix vendor/torob-mcp
-          npm run build --prefix vendor/torob-mcp
       - name: Restore price and posting history
         uses: actions/cache/restore@v4
         with:
@@ -60,7 +54,7 @@ jobs:
       - name: Verify Telegram permission without posting
         if: env.RADAR_DRY_RUN != 'true'
         run: python -m dealradar.health
-      - name: Hunt verified deals and publish only new opportunities
+      - name: Hunt Digikala offers with optional Emalls comparison
         run: python scripts/actions_run.py
       - name: Persist hunting memory even after a delivery failure
         if: always() && steps.history.outcome == 'success' && env.RADAR_DRY_RUN != 'true'

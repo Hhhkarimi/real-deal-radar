@@ -21,13 +21,24 @@ LOG = logging.getLogger("dealradar")
 
 
 def run_once(config, *, demo=False, send=True):
-    if not monitoring_allowed(config):
+    manual=bool(config.get('telegram',{}).get('manual_run_id'))
+    if not manual and not monitoring_allowed(config):
         LOG.info("Monitoring paused outside configured local hours")
         return dict(generated_at=dt.datetime.now(UTC).isoformat(), interval_hours=config["interval_hours"],
                     candidate_count=0, demo=demo, agent=config.get("agent", {}).get("enabled", False),
                     deals=[], flash_deals=[], digest_deals=[], advertised_offers=[], bestsellers=[], errors=[],
                     telegram_delivery={"status": "skipped", "reason": "outside_monitoring_hours"})
     if config.get("agent", {}).get("enabled", False):
+        if config.get('agent',{}).get('market_source')=='emalls':
+            # Keep the scan schedule, but never gate Digikala suggestions on
+            # another site's availability or on the verified-only hunter.
+            policy=dict(config,agent=dict(config['agent'],enabled=False),
+                        torob=dict(config.get('torob',{}),enabled=False,backend='disabled'),
+                        bestsellers=dict(config.get('bestsellers',{}),enabled=False),
+                        emalls=dict(config.get('emalls',{}),enabled=True),
+                        digikala=dict(config.get('digikala',{}),enabled=True),feeds={'candidates':[],'market':[]},market_pages=[],
+                        interval_hours=config['agent'].get('digest_hours',12))
+            return run_once(policy,demo=demo,send=send)
         from .hunter import run_once as hunt_once
         return hunt_once(config, demo=demo, send=send)
     now = dt.datetime.now(UTC)
@@ -87,6 +98,12 @@ def run_once(config, *, demo=False, send=True):
         advertised = advertised_shortlist(results, config, dt.datetime.now(UTC), config["max_items"] - len(deals))
         bestsellers, bestseller_errors = ([], []) if demo else collect_bestsellers(config, dt.datetime.now(UTC))
         errors.extend(bestseller_errors)
+        if config.get('emalls',{}).get('enabled') and not demo:
+            from .emalls import enrich_emalls
+            eligible_rows=[r for r in results if not r['candidate']['supermarket'] and r['candidate']['in_stock']]
+            from .pricing import model_terms
+            eligible_rows.sort(key=lambda r:(not bool(model_terms(r['candidate']['title'])),-r['candidate']['discount_percent']))
+            enrich_emalls(eligible_rows,config)
         per_category = config.get('grouping',{}).get('items_per_category',5)
         category_level = config.get('grouping',{}).get('category_level','group')
         # Preserve official bestseller ordering before allocating price requests.
@@ -116,6 +133,13 @@ def run_once(config, *, demo=False, send=True):
             due=lambda c:item_due(history,channel_key,c,float(settings.get('price_change_percent',5))) if channel_key else True
             eligible=verified+advertised_shortlist(results,config,dt.datetime.now(UTC),len(results))
             showcase_items=select_showcase(eligible,bestsellers,settings,due=due)
+            if not showcase_items and settings.get('always_recommend',False):
+                # Prefer fresh deals, then allow an explicitly labelled repeat
+                # instead of silently dropping all recommendations.
+                fallback_policy=dict(config,min_advertised_discount=0)
+                fallback=verified+advertised_shortlist(results,fallback_policy,dt.datetime.now(UTC),len(results))
+                showcase_items=select_showcase(fallback,bestsellers,settings,due=lambda c:True)
+                for row in showcase_items:row['fallback_recommendation']=True
             discount_items=[r for r in showcase_items if r['showcase_section']=='discount']
             deals=[r for r in discount_items if r['status']=='verified']
             advertised=[r for r in discount_items if r['status']!='verified']
@@ -127,6 +151,7 @@ def run_once(config, *, demo=False, send=True):
                       advertised_offers=advertised,
                       bestsellers=bestsellers, bestsellers_enabled=config.get("bestsellers", {}).get("enabled", False),
                       value_ranking=config.get('torob',{}).get('backend')=='mcp',
+                      market_source='emalls' if config.get('emalls',{}).get('enabled') else 'torob',
                       verified_not_shown=max(0, len(verified) - len(deals)), errors=errors)
         if grouped:
             report.update(grouped=True, items_per_category=per_category,
@@ -137,7 +162,7 @@ def run_once(config, *, demo=False, send=True):
         if config.get("_market_coverage"):
             report["market_coverage"] = config["_market_coverage"]
             if report['market_coverage'].get('provider_status')=='unavailable':
-                report['errors'].append('Torob MCP price source unavailable; inspect market coverage')
+                report['errors'].append(('Emalls' if report['market_source']=='emalls' else 'Torob MCP')+' price source unavailable; inspect market coverage')
         if not demo and send:
             report["errors"].extend(publish(report, history, config))
         else:
