@@ -30,6 +30,32 @@ def merchant(**overrides):
 
 
 class LiveSources(unittest.TestCase):
+    def test_amazing_widget_feed_hydrates_products_from_current_product_service(self):
+        from dealradar.sources import collect
+        from pathlib import Path
+        listing={'data':{'widgets':[{'type':'vertical_product_listing','data':{
+            'pager':{'total_pages':1},'widgets':[{'type':'product','data':{'id':123,'price':{'selling_price':1}}}]}}]}}
+        def get(url, **kwargs):
+            if '/amazing/v1/page/0?' in url:return json.dumps(listing)
+            if '/product/v1/products/123/' in url:return json.dumps({'data':{'product':product()}})
+            raise AssertionError('Unexpected or obsolete endpoint: '+url)
+        with patch('dealradar.sources.fetch',side_effect=get) as fetch, patch('dealradar.sources.time.sleep'):
+            offers,_,errors=collect({'_base':Path('.'),'digikala':{'enabled':True,'pages':6}},NOW)
+        self.assertEqual(errors,[])
+        self.assertEqual(len(offers),1)
+        self.assertEqual(offers[0].price_toman,1000000)
+        self.assertEqual(offers[0].warranty_key,'گارانتی 18 ماهه تست')
+        self.assertEqual(fetch.call_count,2)
+
+    def test_unknown_amazing_widget_schema_is_reported_as_an_error(self):
+        from dealradar.sources import collect
+        from pathlib import Path
+        payload={'data':{'widgets':[{'type':'unknown'}]}}
+        with patch('dealradar.sources.fetch',return_value=json.dumps(payload)):
+            offers,_,errors=collect({'_base':Path('.'),'digikala':{'enabled':True,'pages':1}},NOW)
+        self.assertEqual(offers,[])
+        self.assertTrue(errors)
+
     def test_bestsellers_keep_source_rank_and_allow_zero_discount(self):
         from dealradar.sources import collect_bestsellers
         a = product(); a['id'] = 1; a['default_variant']['price']['discount_percent'] = 0
