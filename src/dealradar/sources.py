@@ -172,8 +172,26 @@ def dk_card(product, now):
 
 
 def dk_details(product_id, now):
-    data = json.loads(fetch(f"https://api.digikala.com/v2/product/{int(product_id)}/"))
-    return dk_card(data["data"]["product"], now)
+    data = json.loads(fetch(f"https://api.digikala.com/product/v1/products/{int(product_id)}/"))
+    product = data["data"]["product"]
+    if product.get('id') != int(product_id):
+        raise ValueError('Digikala returned a different product')
+    return dk_card(product, now)
+
+
+def dk_listing(data):
+    """Read Amazing's widget feed, retaining the legacy feed shape for fixtures."""
+    payload = data['data']
+    if isinstance(payload.get('products'), list):
+        return payload['products'], None
+    widgets = payload.get('widgets')
+    if not isinstance(widgets, list):
+        raise ValueError('Digikala response schema changed')
+    listing = next((w.get('data') for w in widgets if w.get('type') == 'vertical_product_listing'), None)
+    if not isinstance(listing, dict) or not isinstance(listing.get('widgets'), list):
+        raise ValueError('Digikala product listing missing')
+    rows = [w['data'] for w in listing['widgets'] if w.get('type') == 'product']
+    return rows, listing.get('pager', {}).get('total_pages')
 
 
 def collect_bestsellers(config, now):
@@ -252,20 +270,33 @@ def collect(config, now):
             errors.append(f"merchant page {index + 1}: {type(error).__name__}: {error}")
     dk = config.get("digikala", {})
     if dk.get("enabled", False):
+        hydrated = set()
         pages = int(dk.get("pages", 3))
         if not 1 <= pages <= 20:
             raise ValueError("Digikala pages must be 1..20")
         for page in range(1, pages + 1):
             try:
-                data = json.loads(fetch(f"https://api.digikala.com/v1/incredible-offers/products/?page={page}&sort=4"))
-                rows = data["data"].get("products")
-                if not isinstance(rows, list):
-                    raise ValueError("Digikala response schema changed")
+                data = json.loads(fetch(f"https://api.digikala.com/amazing/v1/page/0?sort=4&page={page}&no_widgets=1"))
+                rows, total_pages = dk_listing(data)
                 for row in rows:
                     try:
-                        candidates.append(dk_card(row, now))
-                    except (KeyError, ValueError, TypeError):
-                        errors.append(f"Digikala product {row.get('id', '?')}: incomplete offer")
+                        if 'default_variant' in row:
+                            candidates.append(dk_card(row, now))
+                        else:
+                            product_id = row['id']
+                            if isinstance(product_id, bool) or not isinstance(product_id, int) or product_id <= 0:
+                                raise ValueError('Invalid product ID')
+                            if product_id in hydrated:
+                                continue
+                            hydrated.add(product_id)
+                            # Cards omit seller, warranty and taxonomy. Fetch the
+                            # concrete offer instead of inventing these fields.
+                            time.sleep(max(.2, float(dk.get('detail_request_delay_seconds', 1))))
+                            candidates.append(dk_details(product_id, dt.datetime.now(dt.timezone.utc)))
+                    except Exception as error:
+                        errors.append(f"Digikala product {row.get('id', '?')}: {type(error).__name__}: {error}")
+                if isinstance(total_pages, int) and page >= total_pages:
+                    break
             except Exception as error:
                 errors.append(f"Digikala page {page}: {type(error).__name__}: {error}")
             if page < pages:
