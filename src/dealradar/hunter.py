@@ -249,6 +249,7 @@ def run_once(config, *, demo=False, send=True):
     cfg = settings(config)
     now = dt.datetime.now(UTC)
     candidates, market, errors = collect(config, now)
+    now = dt.datetime.now(UTC)
     demo = demo or any(o.product_key.startswith("demo:") for o in candidates + market)
     history = History(config["_base"] / config.get("database", "data/history.sqlite3"))
     try:
