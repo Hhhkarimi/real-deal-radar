@@ -51,6 +51,7 @@ request_delay_seconds = 1
 
 [digikala]
 enabled = true
+max_duration_seconds = 180
 pages = 6
 request_delay_seconds = 3
 

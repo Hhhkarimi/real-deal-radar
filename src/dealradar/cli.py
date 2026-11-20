@@ -43,6 +43,8 @@ def run_once(config, *, demo=False, send=True):
         return hunt_once(config, demo=demo, send=send)
     now = dt.datetime.now(UTC)
     candidates, market, errors = collect(config, now)
+    # Hydrated offers are observed during collection, after the cycle started.
+    now = dt.datetime.now(UTC)
     # Fabricated fixtures must remain labelled and must never be published,
     # even when somebody runs the demo config with `run` or `preview`.
     demo = demo or any(o.product_key.startswith("demo:") for o in candidates + market)

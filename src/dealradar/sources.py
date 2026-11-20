@@ -6,6 +6,7 @@ import http.cookiejar
 import pathlib
 import re
 import time
+import math
 import urllib.error
 import urllib.request
 from html.parser import HTMLParser
@@ -17,30 +18,44 @@ from .core import Offer, UTC, safe_url, fresh
 HTTP = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 
 
-def fetch_page(url, *, attempts=3):
+def fetch_page(url, *, attempts=3, deadline=None):
     safe_url(url)
+    deadline = min(deadline, time.monotonic()+30) if deadline is not None else time.monotonic()+30
     for attempt in range(attempts):
+        remaining = deadline-time.monotonic()
+        if remaining <= 0:
+            raise RuntimeError(f"HTTP time budget exceeded from {urlsplit(url).hostname}")
         try:
             req = urllib.request.Request(quote(url, safe=":/?=&%+@;,#"), headers={"User-Agent": "RealDealRadar/0.4 (+price-research)", "Accept": "application/json,text/html"})
-            with HTTP.open(req, timeout=20) as response:
+            with HTTP.open(req, timeout=min(20,remaining)) as response:
                 safe_url(response.url)
-                data = response.read(5_000_001)
-                if len(data) > 5_000_000:
-                    raise ValueError("Response exceeds 5 MB")
+                chunks, size = [], 0
+                read = getattr(response, 'read1', response.read)
+                while True:
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError(f"HTTP time budget exceeded from {urlsplit(url).hostname}")
+                    chunk = read(min(65536, 5_000_001-size))
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                    size += len(chunk)
+                    if size > 5_000_000:
+                        raise ValueError("Response exceeds 5 MB")
+                data = b''.join(chunks)
                 return data.decode("utf-8"), response.url
         except urllib.error.HTTPError as error:
             if error.code not in (429, 500, 502, 503, 504) or attempt == attempts - 1:
                 raise RuntimeError(f"HTTP {error.code} from {urlsplit(url).hostname}") from None
             retry = error.headers.get("Retry-After", "")
-            time.sleep(min(30, int(retry)) if retry.isdigit() else 2 ** (attempt + 1))
+            time.sleep(min(max(0,deadline-time.monotonic()), min(30, int(retry)) if retry.isdigit() else 2 ** (attempt + 1)))
         except urllib.error.URLError:
             if attempt == attempts - 1:
                 raise RuntimeError(f"Network failure from {urlsplit(url).hostname}") from None
-            time.sleep(2 ** (attempt + 1))
+            time.sleep(min(max(0,deadline-time.monotonic()),2 ** (attempt + 1)))
 
 
-def fetch(url, *, attempts=3):
-    return fetch_page(url, attempts=attempts)[0]
+def fetch(url, *, attempts=3, deadline=None):
+    return fetch_page(url, attempts=attempts, deadline=deadline)[0]
 
 
 def json_feed(location, base):
@@ -171,8 +186,9 @@ def dk_card(product, now):
     return Offer.parse(row)
 
 
-def dk_details(product_id, now):
-    data = json.loads(fetch(f"https://api.digikala.com/product/v1/products/{int(product_id)}/"))
+def dk_details(product_id, now, *, deadline=None):
+    options = dict(attempts=1,deadline=deadline) if deadline is not None else {}
+    data = json.loads(fetch(f"https://api.digikala.com/product/v1/products/{int(product_id)}/", **options))
     product = data["data"]["product"]
     if product.get('id') != int(product_id):
         raise ValueError('Digikala returned a different product')
@@ -270,15 +286,26 @@ def collect(config, now):
             errors.append(f"merchant page {index + 1}: {type(error).__name__}: {error}")
     dk = config.get("digikala", {})
     if dk.get("enabled", False):
+        duration = dk.get('max_duration_seconds',180)
+        if isinstance(duration,bool) or not isinstance(duration,(int,float)) or not math.isfinite(duration) or not 0 < duration <= 600:
+            raise ValueError('Digikala max_duration_seconds must be within 0..600')
+        deadline = time.monotonic()+duration
+        exhausted = False
         hydrated = set()
         pages = int(dk.get("pages", 3))
         if not 1 <= pages <= 20:
             raise ValueError("Digikala pages must be 1..20")
         for page in range(1, pages + 1):
+            if time.monotonic() >= deadline:
+                exhausted = True
+                break
             try:
-                data = json.loads(fetch(f"https://api.digikala.com/amazing/v1/page/0?sort=4&page={page}&no_widgets=1"))
+                data = json.loads(fetch(f"https://api.digikala.com/amazing/v1/page/0?sort=4&page={page}&no_widgets=1",deadline=deadline))
                 rows, total_pages = dk_listing(data)
                 for row in rows:
+                    if time.monotonic() >= deadline:
+                        exhausted = True
+                        break
                     try:
                         if 'default_variant' in row:
                             candidates.append(dk_card(row, now))
@@ -291,8 +318,12 @@ def collect(config, now):
                             hydrated.add(product_id)
                             # Cards omit seller, warranty and taxonomy. Fetch the
                             # concrete offer instead of inventing these fields.
-                            time.sleep(max(.2, float(dk.get('detail_request_delay_seconds', 1))))
-                            candidates.append(dk_details(product_id, dt.datetime.now(dt.timezone.utc)))
+                            delay = max(.2, float(dk.get('detail_request_delay_seconds', 1)))
+                            if time.monotonic()+delay >= deadline:
+                                exhausted = True
+                                break
+                            time.sleep(delay)
+                            candidates.append(dk_details(product_id, dt.datetime.now(dt.timezone.utc),deadline=deadline))
                     except Exception as error:
                         errors.append(f"Digikala product {row.get('id', '?')}: {type(error).__name__}: {error}")
                 if isinstance(total_pages, int) and page >= total_pages:
@@ -300,7 +331,9 @@ def collect(config, now):
             except Exception as error:
                 errors.append(f"Digikala page {page}: {type(error).__name__}: {error}")
             if page < pages:
-                time.sleep(max(1, float(dk.get("request_delay_seconds", 3))))
+                time.sleep(min(max(0,deadline-time.monotonic()),max(1, float(dk.get("request_delay_seconds", 3)))))
+        if exhausted:
+            errors.append('Digikala collection time budget exhausted; collected offers retained')
     unique = {}
     for offer in candidates:
         key = (offer.product_key, offer.variant_key, offer.warranty_key)
